@@ -11,6 +11,7 @@ from .process_service import ProcessService
 
 GITHUB_DEVICE_LOGIN_URL = "https://github.com/login/device"
 _GITHUB_URL_RE = re.compile(r"https://github\.com/[^\s\x1b]+", re.IGNORECASE)
+_DEVICE_CODE_RE = re.compile(r"\b[A-Z0-9]{4}-[A-Z0-9]{4}\b", re.IGNORECASE)
 
 
 def find_github_device_login_url(text: str) -> str:
@@ -21,6 +22,15 @@ def find_github_device_login_url(text: str) -> str:
         if parsed.scheme.lower() == "https" and parsed.hostname == "github.com" and parsed.path == "/login/device":
             return candidate
     return ""
+
+
+def find_github_device_code(text: str) -> str:
+    """Extract the transient device code only from GitHub CLI's labeled message."""
+    clean = strip_ansi(text)
+    if "one-time code" not in clean.lower():
+        return ""
+    match = _DEVICE_CODE_RE.search(clean)
+    return match.group(0).upper() if match else ""
 
 
 class GitHubService:

@@ -5,7 +5,11 @@ from unittest.mock import Mock
 
 from blender_git_manager.models import CommandResult
 from blender_git_manager.services.git_service import GitCommandError
-from blender_git_manager.services.github_service import GitHubService, find_github_device_login_url
+from blender_git_manager.services.github_service import (
+    GitHubService,
+    find_github_device_code,
+    find_github_device_login_url,
+)
 from blender_git_manager.services.process_service import ProcessService
 
 
@@ -84,3 +88,28 @@ class FindGitHubDeviceLoginUrlTests(unittest.TestCase):
         ):
             with self.subTest(text=text):
                 self.assertEqual(find_github_device_login_url(text), "")
+
+
+class FindGitHubDeviceCodeTests(unittest.TestCase):
+    def test_finds_code_in_current_cli_clipboard_message(self):
+        text = "! One-time code (ABCD-EFGH) copied to clipboard"
+        self.assertEqual(find_github_device_code(text), "ABCD-EFGH")
+
+    def test_finds_code_in_copy_instruction(self):
+        text = "First copy your one-time code: 1A2B-3C4D"
+        self.assertEqual(find_github_device_code(text), "1A2B-3C4D")
+
+    def test_strips_ansi_and_normalizes_code_to_uppercase(self):
+        text = "\x1b[33m! One-time code (\x1b[1mabcd-efgh\x1b[0m) copied to clipboard"
+        self.assertEqual(find_github_device_code(text), "ABCD-EFGH")
+
+    def test_rejects_unlabeled_redacted_or_malformed_codes(self):
+        for text in (
+            "Unrelated identifier ABCD-EFGH",
+            "! One-time code (***-****) copied to clipboard",
+            "! One-time code (ABCDE-FGHI) copied to clipboard",
+            "! One-time code (ABCD_EFGH) copied to clipboard",
+            "No device code here",
+        ):
+            with self.subTest(text=text):
+                self.assertEqual(find_github_device_code(text), "")

@@ -19,6 +19,7 @@ class AsyncModalMixin:
     _timer = None
     _process_service: ProcessService | None = None
     _process_output: SimpleQueue[tuple[str, str]] | None = None
+    _transient_process_output: SimpleQueue[tuple[str, str]] | None = None
     _cancel_requested = False
     _task_label = ""
 
@@ -28,6 +29,7 @@ class AsyncModalMixin:
         label: str,
         function: Callable[[], Any],
         process: ProcessService | None = None,
+        capture_transient_output: bool = False,
     ):
         state = context.scene.git_manager
         if state.task_running:
@@ -37,10 +39,14 @@ class AsyncModalMixin:
         self._task_label = label
         self._cancel_requested = False
         self._process_output = SimpleQueue()
+        self._transient_process_output = SimpleQueue() if capture_transient_output else None
         self._process_service = process
         if process is not None:
             process.reset_cancellation()
             process.set_output_callback(self._queue_process_output)
+            process.set_transient_output_callback(
+                self._queue_transient_process_output if capture_transient_output else None
+            )
 
         state.task_running = True
         state.task_label = label
@@ -55,7 +61,21 @@ class AsyncModalMixin:
         if queue is not None:
             queue.put((level, message))
 
+    def _queue_transient_process_output(self, stream: str, message: str) -> None:
+        queue = self._transient_process_output
+        if queue is not None:
+            queue.put((stream, message))
+
     def _drain_process_output(self, context: bpy.types.Context) -> None:
+        transient_queue = self._transient_process_output
+        if transient_queue is not None:
+            while True:
+                try:
+                    stream, message = transient_queue.get_nowait()
+                except Empty:
+                    break
+                self.on_transient_process_output(context, stream, message)
+
         queue = self._process_output
         if queue is None:
             return
@@ -90,6 +110,7 @@ class AsyncModalMixin:
         try:
             result = self._future.result()
             if self._cancel_requested:
+                self.on_async_cancel(context)
                 append_output(context, f"{self._task_label} cancelled.", "WARNING")
                 outcome = {"CANCELLED"}
             else:
@@ -97,6 +118,7 @@ class AsyncModalMixin:
                 append_output(context, f"{self._task_label} completed.", "SUCCESS")
         except Exception as exc:
             if self._cancel_requested:
+                self.on_async_cancel(context)
                 append_output(context, f"{self._task_label} cancelled.", "WARNING")
                 outcome = {"CANCELLED"}
             else:
@@ -114,6 +136,7 @@ class AsyncModalMixin:
         self._drain_process_output(context)
         if self._process_service is not None:
             self._process_service.set_output_callback(None)
+            self._process_service.set_transient_output_callback(None)
             self._process_service = None
         if self._timer is not None:
             context.window_manager.event_timer_remove(self._timer)
@@ -122,11 +145,15 @@ class AsyncModalMixin:
         context.scene.git_manager.task_label = ""
         self._future = None
         self._process_output = None
+        self._transient_process_output = None
 
     def on_async_success(self, _context: bpy.types.Context, _result: Any) -> None:
         pass
 
     def on_async_error(self, _context: bpy.types.Context, _error: Exception) -> None:
+        pass
+
+    def on_async_cancel(self, _context: bpy.types.Context) -> None:
         pass
 
     def on_process_output(self, context: bpy.types.Context, level: str, message: str) -> None:
@@ -137,3 +164,6 @@ class AsyncModalMixin:
             except RuntimeError:
                 return
         append_output(context, message, level, echo_console=False)
+
+    def on_transient_process_output(self, _context: bpy.types.Context, _stream: str, _message: str) -> None:
+        pass

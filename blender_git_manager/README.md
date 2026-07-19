@@ -10,7 +10,7 @@ Esta entrega implementa una base ejecutable del **MVP** descrito en el documento
 - Panel **Git** en la barra lateral de la Vista 3D.
 - Ventana amplia emergente con el panel principal.
 - Detección de `git`, `git lfs` y `gh`.
-- Autenticación de GitHub mediante `gh auth login --web`.
+- Autenticación de GitHub mediante `gh auth login --web`, con código temporal visible y recopiable.
 - Detección automática del repositorio que contiene el archivo `.blend`.
 - Asociación visible de otro repositorio con la sesión actual.
 - Asistente visual para inicializar un repositorio.
@@ -52,7 +52,7 @@ El complemento continúa ofreciendo Git local cuando GitHub CLI no está instala
 
 ## Instalación rápida
 
-1. Descarga `blender_git_manager-0.1.1.zip`.
+1. Descarga `blender_git_manager-0.1.2.zip`.
 2. En Blender abre **Edit > Preferences > Add-ons** o **Extensions**.
 3. Selecciona **Install from Disk**.
 4. Elige el ZIP sin descomprimirlo.

@@ -4,9 +4,70 @@ import webbrowser
 
 import bpy
 
-from ..services.github_service import find_github_device_login_url
+from ..services.github_service import find_github_device_code, find_github_device_login_url
 from ..state_sync import append_output, build_services, refresh_dependencies
 from .base import AsyncModalMixin
+
+_ACTIVE_GITHUB_DEVICE_CODE = ""
+
+
+def _clear_active_device_code() -> None:
+    global _ACTIVE_GITHUB_DEVICE_CODE
+    _ACTIVE_GITHUB_DEVICE_CODE = ""
+
+
+def _show_device_code_popup(context) -> bool:
+    code = _ACTIVE_GITHUB_DEVICE_CODE
+    if not code or context.window is None:
+        return False
+
+    def draw(menu, _context):
+        layout = menu.layout
+        layout.label(text="Enter this temporary code on GitHub:")
+        code_row = layout.row()
+        code_row.scale_y = 1.5
+        code_row.alignment = "CENTER"
+        code_row.label(text=code)
+        layout.separator()
+        layout.label(text="It is also available on the clipboard.")
+        layout.operator("git_manager.copy_github_device_code", text="Copy Code Again", icon="COPYDOWN")
+
+    context.window_manager.popup_menu(draw, title="GitHub Device Authentication", icon="INFO")
+    return True
+
+
+class GITMANAGER_OT_copy_github_device_code(bpy.types.Operator):
+    bl_idname = "git_manager.copy_github_device_code"
+    bl_label = "Copy GitHub Device Code"
+    bl_description = "Copy the active temporary GitHub authentication code again"
+
+    @classmethod
+    def poll(cls, _context):
+        return bool(_ACTIVE_GITHUB_DEVICE_CODE)
+
+    def execute(self, context):
+        if not _ACTIVE_GITHUB_DEVICE_CODE:
+            self.report({"WARNING"}, "The GitHub device code is no longer active.")
+            return {"CANCELLED"}
+        context.window_manager.clipboard = _ACTIVE_GITHUB_DEVICE_CODE
+        self.report({"INFO"}, "GitHub device code copied to the clipboard.")
+        return {"FINISHED"}
+
+
+class GITMANAGER_OT_show_github_device_code(bpy.types.Operator):
+    bl_idname = "git_manager.show_github_device_code"
+    bl_label = "Show GitHub Device Code"
+    bl_description = "Show the active temporary GitHub authentication code"
+
+    @classmethod
+    def poll(cls, _context):
+        return bool(_ACTIVE_GITHUB_DEVICE_CODE)
+
+    def execute(self, context):
+        if not _show_device_code_popup(context):
+            self.report({"WARNING"}, "The GitHub device code is not available yet.")
+            return {"CANCELLED"}
+        return {"FINISHED"}
 
 
 class GITMANAGER_OT_github_login(AsyncModalMixin, bpy.types.Operator):
@@ -16,10 +77,15 @@ class GITMANAGER_OT_github_login(AsyncModalMixin, bpy.types.Operator):
     _browser_opened = False
 
     def execute(self, context):
+        state = context.scene.git_manager
+        if state.task_running:
+            self.report({"WARNING"}, f"Another Git task is already running: {state.task_label}")
+            return {"CANCELLED"}
         _git, _lfs, github, _repository = build_services(context)
         if not github.version().successful:
             self.report({"ERROR"}, "GitHub CLI is not installed or its path is invalid.")
             return {"CANCELLED"}
+        _clear_active_device_code()
         self._browser_opened = False
         append_output(
             context,
@@ -31,6 +97,28 @@ class GITMANAGER_OT_github_login(AsyncModalMixin, bpy.types.Operator):
             "GitHub browser authentication",
             github.login_web,
             process=github.process,
+            capture_transient_output=True,
+        )
+
+    def on_transient_process_output(self, context, _stream, message):
+        global _ACTIVE_GITHUB_DEVICE_CODE
+        code = find_github_device_code(message)
+        if not code or code == _ACTIVE_GITHUB_DEVICE_CODE:
+            return
+
+        _ACTIVE_GITHUB_DEVICE_CODE = code
+        try:
+            context.window_manager.clipboard = code
+        except Exception:  # noqa: BLE001
+            append_output(context, "The device code could not be copied automatically.", "WARNING")
+        try:
+            _show_device_code_popup(context)
+        except Exception:  # noqa: BLE001
+            append_output(context, "The device code popup could not be opened.", "WARNING")
+        append_output(
+            context,
+            "The temporary GitHub device code is visible in Blender and can be copied again.",
+            "INFO",
         )
 
     def on_process_output(self, context, level, message):
@@ -62,6 +150,12 @@ class GITMANAGER_OT_github_login(AsyncModalMixin, bpy.types.Operator):
             raise RuntimeError("GitHub CLI finished, but the authenticated session could not be verified.")
         user = state.github_user
         append_output(context, f"Authenticated as {user or 'GitHub user'}.", "SUCCESS")
+
+    def _finish_timer(self, context):
+        try:
+            super()._finish_timer(context)
+        finally:
+            _clear_active_device_code()
 
 
 class GITMANAGER_OT_github_logout(AsyncModalMixin, bpy.types.Operator):

@@ -20,6 +20,7 @@ from ..models import CommandResult
 from ..utils.formatting import redact_arguments, redact_text
 
 ProcessOutputCallback = Callable[[str, str], None]
+ProcessTransientOutputCallback = Callable[[str, str], None]
 _CONSOLE_LOCK = Lock()
 
 
@@ -37,9 +38,11 @@ class ProcessService:
         default_timeout: int = 120,
         output_callback: ProcessOutputCallback | None = None,
         echo_console: bool = True,
+        transient_output_callback: ProcessTransientOutputCallback | None = None,
     ) -> None:
         self.default_timeout = default_timeout
         self._output_callback = output_callback
+        self._transient_output_callback = transient_output_callback
         self._echo_console = echo_console
         self._callback_lock = Lock()
         self._process_lock = Lock()
@@ -49,6 +52,11 @@ class ProcessService:
     def set_output_callback(self, callback: ProcessOutputCallback | None) -> None:
         with self._callback_lock:
             self._output_callback = callback
+
+    def set_transient_output_callback(self, callback: ProcessTransientOutputCallback | None) -> None:
+        """Set an in-memory raw-output sink that must never write its values to logs."""
+        with self._callback_lock:
+            self._transient_output_callback = callback
 
     def reset_cancellation(self) -> None:
         self._cancel_requested.clear()
@@ -84,6 +92,15 @@ class ProcessService:
                         f"[Blender Git Manager][WARNING] Process output callback failed: {redact_text(str(exc))}"
                     )
 
+    def _emit_transient(self, stream: str, message: str) -> None:
+        with self._callback_lock:
+            callback = self._transient_output_callback
+        if callback is not None:
+            try:
+                callback(stream, message)
+            except Exception:  # noqa: BLE001 - never expose raw output through an error
+                self._emit("WARNING", "[process] Transient output callback failed.")
+
     @staticmethod
     def _format_command(command: Sequence[str]) -> str:
         safe_command = redact_arguments(command)
@@ -97,6 +114,7 @@ class ProcessService:
                 chunks.append(line)
                 message = line.rstrip("\r\n")
                 if message:
+                    self._emit_transient(label, message)
                     self._emit("INFO", f"[{label}] {message}")
         except (OSError, ValueError) as exc:
             if not self._cancel_requested.is_set():

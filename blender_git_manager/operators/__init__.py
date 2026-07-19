@@ -1,4 +1,9 @@
-from .authentication import GITMANAGER_OT_github_login, GITMANAGER_OT_github_logout
+from .authentication import (
+    GITMANAGER_OT_copy_github_device_code,
+    GITMANAGER_OT_github_login,
+    GITMANAGER_OT_github_logout,
+    GITMANAGER_OT_show_github_device_code,
+)
 from .branches import GITMANAGER_OT_create_branch, GITMANAGER_OT_switch_branch
 from .commits import GITMANAGER_OT_commit
 from .common import GITMANAGER_OT_open_folder, GITMANAGER_OT_open_preferences, GITMANAGER_OT_open_remote, GITMANAGER_OT_refresh
@@ -20,6 +25,8 @@ CLASSES = (
     GITMANAGER_OT_open_folder,
     GITMANAGER_OT_open_remote,
     GITMANAGER_OT_open_preferences,
+    GITMANAGER_OT_copy_github_device_code,
+    GITMANAGER_OT_show_github_device_code,
     GITMANAGER_OT_github_login,
     GITMANAGER_OT_github_logout,
     GITMANAGER_OT_open_manager,

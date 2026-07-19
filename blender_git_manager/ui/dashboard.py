@@ -156,6 +156,12 @@ def draw_dashboard(layout, context: bpy.types.Context, expanded: bool = False):
         task = layout.box()
         task.label(text=f"Running: {state.task_label}", icon="TIME")
         task.label(text="Press Esc to cancel the external process.")
+        if "GitHub browser authentication" in state.task_label:
+            task.operator(
+                "git_manager.show_github_device_code",
+                text="Show GitHub Device Code",
+                icon="INFO",
+            )
 
     if expanded or not state.git_installed or not state.repository_path:
         _draw_dependencies(layout, state)

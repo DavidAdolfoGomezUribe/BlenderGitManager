@@ -1,11 +1,11 @@
 Blender Git Manager MVP validation report
 
-Version: 0.1.1
+Version: 0.1.2
 Manifest: OK (Blender 5.2 extension validate)
 Python compileall: OK
-Unit/integration tests: 32 passed (CPython 3.13 and Blender 5.2 embedded Python)
+Unit/integration tests: 39 passed (CPython 3.13 and Blender 5.2 embedded Python)
 Blender register/unregister smoke test: OK (Blender 5.2 LTS)
-Operator identifiers: 22 unique
+Operator identifiers: 24 unique
 Installable ZIP root: OK
 Security scan: subprocess usage is centralized in ProcessService; shell=False; logs are redacted
-SHA256: 1c2035273e7d81f758ac21fd9f736a3cb0724822c800608d539539d5c43e03c4
+SHA256: 8375d371bb9923a0f6caef55ed9a0c5fb5962f1dcf1665cf41ee259566aeb976

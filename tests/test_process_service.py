@@ -199,6 +199,81 @@ class ProcessServiceTests(unittest.TestCase):
         self.assertNotIn(secret, emitted)
         self.assertIn("***", emitted)
 
+    def test_transient_callback_receives_raw_code_while_logs_stay_redacted(self):
+        code = "ABCD-EFGH"
+        raw_events: list[tuple[str, str]] = []
+        output_events: list[tuple[str, str]] = []
+        console_output = io.StringIO()
+        message = f"! One-time code ({code}) copied to clipboard"
+        service = ProcessService(
+            output_callback=lambda level, text: output_events.append((level, text)),
+            transient_output_callback=lambda stream, text: raw_events.append((stream, text)),
+            echo_console=True,
+        )
+
+        with redirect_stdout(console_output):
+            result = service.run(
+                sys.executable,
+                ["-c", "import os, sys; print(os.environ['BGM_DEVICE_MESSAGE'], file=sys.stderr)"],
+                timeout=10,
+                environment={"BGM_DEVICE_MESSAGE": message},
+            )
+
+        self.assertTrue(result.successful, result.stderr)
+        self.assertIn(("stderr", message), raw_events)
+
+        persisted_output = "\n".join(text for _level, text in output_events)
+        self.assertNotIn(code, persisted_output)
+        self.assertIn("***-****", persisted_output)
+
+        console = console_output.getvalue()
+        self.assertNotIn(code, console)
+        self.assertIn("***-****", console)
+
+    def test_transient_callback_failure_does_not_break_or_leak_process_output(self):
+        code = "WXYZ-1234"
+        callback_calls = 0
+        output_events: list[tuple[str, str]] = []
+
+        def failing_callback(_stream: str, raw_message: str) -> None:
+            nonlocal callback_calls
+            callback_calls += 1
+            raise RuntimeError(f"callback rejected {raw_message}")
+
+        service = ProcessService(
+            output_callback=lambda level, text: output_events.append((level, text)),
+            transient_output_callback=failing_callback,
+            echo_console=False,
+        )
+        result = service.run(
+            sys.executable,
+            ["-c", "import os; print(os.environ['BGM_DEVICE_MESSAGE'])"],
+            timeout=10,
+            environment={"BGM_DEVICE_MESSAGE": f"One-time code: {code}"},
+        )
+
+        self.assertTrue(result.successful, result.stderr)
+        self.assertEqual(callback_calls, 1)
+        persisted_output = "\n".join(text for _level, text in output_events)
+        self.assertIn("Transient output callback failed", persisted_output)
+        self.assertNotIn(code, persisted_output)
+        self.assertIn("***-****", persisted_output)
+
+    def test_transient_callback_can_be_cleared_before_a_later_run(self):
+        raw_events: list[tuple[str, str]] = []
+        service = ProcessService(
+            transient_output_callback=lambda stream, text: raw_events.append((stream, text)),
+            echo_console=False,
+        )
+
+        first = service.run(sys.executable, ["-c", "print('first-transient-line')"], timeout=10)
+        service.set_transient_output_callback(None)
+        second = service.run(sys.executable, ["-c", "print('second-private-line')"], timeout=10)
+
+        self.assertTrue(first.successful, first.stderr)
+        self.assertTrue(second.successful, second.stderr)
+        self.assertEqual(raw_events, [("stdout", "first-transient-line")])
+
     def test_echo_console_false_keeps_console_quiet(self):
         output = io.StringIO()
         with redirect_stdout(output):
