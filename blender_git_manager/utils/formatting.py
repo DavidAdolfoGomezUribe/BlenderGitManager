@@ -60,7 +60,8 @@ def redact_arguments(arguments: Sequence[str]) -> list[str]:
             scheme = prefix.split(":", 1)[0]
             result.append(f"{scheme}://***@{suffix}")
             continue
-        if any(marker in lowered for marker in SENSITIVE_ARGUMENT_MARKERS):
+        option_name = lowered.split("=", 1)[0] if argument.startswith("-") else ""
+        if option_name and any(marker in option_name for marker in SENSITIVE_ARGUMENT_MARKERS):
             if "=" in argument:
                 key, _value = argument.split("=", 1)
                 result.append(f"{key}=***")

@@ -5,7 +5,7 @@
 1. **La interfaz no ejecuta comandos directamente.** Los operadores llaman a servicios.
 2. **Todo proceso externo pasa por `ProcessService`.** Se prohíbe `shell=True`.
 3. **Los modelos de dominio no dependen de Blender.** Esto permite pruebas unitarias.
-4. **Los hilos no modifican `bpy`.** Los operadores modales reciben el resultado y actualizan Blender en el hilo principal.
+4. **Los hilos no modifican `bpy`.** `ProcessService` encola la salida incremental y los operadores modales la aplican en el hilo principal.
 5. **El repositorio local es independiente de GitHub.** Un fallo remoto nunca invalida un repositorio local ya creado.
 6. **No existe almacenamiento de credenciales.** La autenticación se delega en `gh` y gestores del sistema.
 
@@ -29,7 +29,7 @@ Los operadores validan contexto Blender, guardan el archivo cuando corresponde y
 - `LFSService`: comandos `git lfs`.
 - `GitHubService`: comandos `gh`.
 - `RepositoryService`: flujos compuestos como init y clone.
-- `ProcessService`: subprocess seguro.
+- `ProcessService`: `Popen` seguro, salida incremental saneada, timeout y cancelación.
 
 ### Modelos
 

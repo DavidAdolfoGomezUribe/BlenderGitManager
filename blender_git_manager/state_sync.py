@@ -36,7 +36,7 @@ def append_output(
                     f"[Blender Git Manager][{timestamp}][{safe_level}] {safe_message}",
                     flush=True,
                 )
-            except (OSError, UnicodeError):
+            except (AttributeError, OSError, UnicodeError, ValueError):
                 pass
 
 

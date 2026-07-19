@@ -4,6 +4,7 @@ import unittest
 from unittest.mock import Mock
 
 from blender_git_manager.models import CommandResult
+from blender_git_manager.services.git_service import GitCommandError
 from blender_git_manager.services.github_service import GitHubService, find_github_device_login_url
 from blender_git_manager.services.process_service import ProcessService
 
@@ -47,6 +48,22 @@ class GitHubServiceTests(unittest.TestCase):
             with self.subTest(environment_variable=name):
                 self.assertEqual(environment.get(name), "1")
 
+    def test_login_web_redacts_failure_message(self):
+        process = Mock(spec=ProcessService)
+        secret = "ghp_BGM_GITHUB_ERROR_SENTINEL_123456789"
+        process.run.return_value = CommandResult(
+            executable="gh",
+            arguments=(),
+            return_code=1,
+            stderr=f"Authorization: Bearer {secret}",
+        )
+
+        with self.assertRaises(GitCommandError) as raised:
+            GitHubService(process=process).login_web()
+
+        self.assertNotIn(secret, str(raised.exception))
+        self.assertIn("***", str(raised.exception))
+
 
 class FindGitHubDeviceLoginUrlTests(unittest.TestCase):
     def test_finds_device_login_url_in_cli_output(self):
@@ -61,6 +78,7 @@ class FindGitHubDeviceLoginUrlTests(unittest.TestCase):
         for text in (
             "http://github.com/login/device",
             "https://github.com.evil.example/login/device",
+            "https://github.com/login/device/extra",
             "https://github.com@evil.example/login/device",
             "no browser URL here",
         ):

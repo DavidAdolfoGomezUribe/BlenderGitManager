@@ -23,6 +23,14 @@ ProcessOutputCallback = Callable[[str, str], None]
 _CONSOLE_LOCK = Lock()
 
 
+def _write_console(message: str) -> None:
+    try:
+        with _CONSOLE_LOCK:
+            print(message, flush=True)
+    except (AttributeError, OSError, UnicodeError, ValueError):
+        pass
+
+
 class ProcessService:
     def __init__(
         self,
@@ -63,8 +71,7 @@ class ProcessService:
 
         if self._echo_console:
             timestamp = datetime.now().strftime("%H:%M:%S")
-            with _CONSOLE_LOCK:
-                print(f"[Blender Git Manager][{timestamp}][{level}] {safe_message}", flush=True)
+            _write_console(f"[Blender Git Manager][{timestamp}][{level}] {safe_message}")
 
         with self._callback_lock:
             callback = self._output_callback
@@ -73,11 +80,9 @@ class ProcessService:
                 callback(level, safe_message)
             except Exception as exc:  # noqa: BLE001 - logging must never break a command
                 if self._echo_console:
-                    with _CONSOLE_LOCK:
-                        print(
-                            f"[Blender Git Manager][WARNING] Process output callback failed: {redact_text(str(exc))}",
-                            flush=True,
-                        )
+                    _write_console(
+                        f"[Blender Git Manager][WARNING] Process output callback failed: {redact_text(str(exc))}"
+                    )
 
     @staticmethod
     def _format_command(command: Sequence[str]) -> str:
@@ -147,6 +152,16 @@ class ProcessService:
         started = time.perf_counter()
         effective_timeout = timeout if timeout is not None else self.default_timeout
         self._emit("INFO", f"[command] {self._format_command(command)}")
+        if self._cancel_requested.is_set():
+            self._emit("WARNING", "[process] Command skipped because cancellation was requested.")
+            return CommandResult(
+                executable=executable,
+                arguments=tuple(safe_arguments),
+                return_code=130,
+                stderr="Command cancelled.",
+                duration_seconds=time.perf_counter() - started,
+                cancelled=True,
+            )
         try:
             process = subprocess.Popen(
                 command,

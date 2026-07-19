@@ -6,6 +6,7 @@ from typing import Any, Callable
 
 import bpy
 
+from ..preferences import get_addon_preferences
 from ..services.process_service import ProcessService
 from ..state_sync import append_output, refresh_repository_state
 from ..utils.formatting import redact_text
@@ -129,4 +130,10 @@ class AsyncModalMixin:
         pass
 
     def on_process_output(self, context: bpy.types.Context, level: str, message: str) -> None:
+        if message.startswith("[command]"):
+            try:
+                if not get_addon_preferences(context).show_developer_output:
+                    return
+            except RuntimeError:
+                return
         append_output(context, message, level, echo_console=False)

@@ -1,7 +1,7 @@
 schema_version = "1.0.0"
 
 id = "blender_git_manager"
-version = "0.1.0"
+version = "0.1.1"
 name = "Blender Git Manager"
 tagline = "Visual Git, Git LFS and GitHub workflows inside Blender"
 maintainer = "David Gomez"
@@ -13,7 +13,7 @@ license = ["SPDX:GPL-3.0-or-later"]
 
 [permissions]
 files = "Manage Blender project files and local Git repositories"
-network = "Authenticate with GitHub and synchronize remote repositories through installed command line tools"
+network = "Authenticate with GitHub and synchronize remote repositories"
 
 [build]
 paths_exclude_pattern = [

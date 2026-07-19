@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import io
 import os
+import subprocess
 import sys
 import threading
 import unittest
@@ -14,12 +15,16 @@ from blender_git_manager.utils.formatting import redact_arguments
 
 class ProcessServiceTests(unittest.TestCase):
     def test_process_output(self):
-        result = ProcessService().run(sys.executable, ["-c", "print('ok')"], timeout=10)
+        result = ProcessService(echo_console=False).run(sys.executable, ["-c", "print('ok')"], timeout=10)
         self.assertTrue(result.successful)
         self.assertEqual(result.stdout, "ok")
 
     def test_process_failure(self):
-        result = ProcessService().run(sys.executable, ["-c", "import sys; sys.exit(7)"], timeout=10)
+        result = ProcessService(echo_console=False).run(
+            sys.executable,
+            ["-c", "import sys; sys.exit(7)"],
+            timeout=10,
+        )
         self.assertEqual(result.return_code, 7)
         self.assertFalse(result.successful)
 
@@ -34,7 +39,7 @@ class ProcessServiceTests(unittest.TestCase):
 
         with patch(
             "blender_git_manager.services.process_service.subprocess.Popen",
-            wraps=__import__("subprocess").Popen,
+            wraps=subprocess.Popen,
         ) as popen:
             result = ProcessService(echo_console=False).run(
                 sys.executable,
@@ -93,6 +98,44 @@ class ProcessServiceTests(unittest.TestCase):
         self.assertTrue(any(message.startswith("[stdout]") and "ready-before-exit" in message for message in messages))
         self.assertTrue(any(message.startswith("[stderr]") and "stderr-after-delay" in message for message in messages))
         self.assertTrue(any(message.startswith("[process]") for message in messages))
+
+    def test_large_stdout_and_stderr_do_not_deadlock(self):
+        line_count = 512
+        script = (
+            "import sys; "
+            f"[print(f'out-{{i}}-' + 'x' * 256) for i in range({line_count})]; "
+            f"[print(f'err-{{i}}-' + 'y' * 256, file=sys.stderr) for i in range({line_count})]"
+        )
+
+        result = ProcessService(default_timeout=10, echo_console=False).run(sys.executable, ["-c", script])
+
+        self.assertTrue(result.successful, result.stderr[-500:])
+        stdout_lines = result.stdout.splitlines()
+        stderr_lines = result.stderr.splitlines()
+        self.assertEqual(len(stdout_lines), line_count)
+        self.assertEqual(len(stderr_lines), line_count)
+        self.assertTrue(stdout_lines[0].startswith("out-0-"))
+        self.assertTrue(stdout_lines[-1].startswith(f"out-{line_count - 1}-"))
+        self.assertTrue(stderr_lines[0].startswith("err-0-"))
+        self.assertTrue(stderr_lines[-1].startswith(f"err-{line_count - 1}-"))
+
+    def test_callback_failure_does_not_break_process(self):
+        callback_calls = 0
+
+        def failing_callback(_level: str, _message: str) -> None:
+            nonlocal callback_calls
+            callback_calls += 1
+            raise RuntimeError("test callback failure")
+
+        result = ProcessService(output_callback=failing_callback, echo_console=False).run(
+            sys.executable,
+            ["-c", "print('process-survived')"],
+            timeout=10,
+        )
+
+        self.assertTrue(result.successful, result.stderr)
+        self.assertEqual(result.stdout, "process-survived")
+        self.assertGreaterEqual(callback_calls, 3)
 
     def test_default_timeout_returns_standard_timeout_result(self):
         service = ProcessService(default_timeout=0.2, echo_console=False)
@@ -167,6 +210,26 @@ class ProcessServiceTests(unittest.TestCase):
 
         self.assertTrue(result.successful, result.stderr)
         self.assertEqual(output.getvalue(), "")
+
+    def test_echo_console_true_prints_sanitized_lifecycle(self):
+        output = io.StringIO()
+        secret = "ghp_BGM_CONSOLE_SENTINEL_123456789"
+        with redirect_stdout(output):
+            result = ProcessService(echo_console=True).run(
+                sys.executable,
+                ["-c", "import os; print(os.environ['BGM_CONSOLE_OUTPUT'])"],
+                timeout=10,
+                environment={"BGM_CONSOLE_OUTPUT": f"Authorization: Bearer {secret}"},
+            )
+
+        self.assertTrue(result.successful, result.stderr)
+        console = output.getvalue()
+        self.assertIn("[Blender Git Manager]", console)
+        self.assertIn("[command]", console)
+        self.assertIn("[stdout]", console)
+        self.assertIn("[process]", console)
+        self.assertNotIn(secret, console)
+        self.assertIn("***", console)
 
     def test_redaction(self):
         args = redact_arguments(["--token", "abc", "https://user:secret@github.com/owner/repo.git"])

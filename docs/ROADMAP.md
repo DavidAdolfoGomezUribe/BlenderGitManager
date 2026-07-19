@@ -19,7 +19,7 @@
 - Revert y checkout con respaldo obligatorio.
 - Conflictos de texto: ours, theirs, resolved y editor externo.
 - Conflictos `.blend`: backup de ambas variantes y selección explícita.
-- Tareas persistentes con cancelación real de `Popen` y árboles de procesos.
+- Centro persistente de tareas y cancelación de árboles de procesos completos.
 - Progreso LFS mediante parsing de stderr y eventos de transferencia.
 - Búsqueda por autor, hash, rama y mensaje.
 
@@ -34,7 +34,7 @@
 
 ## Deuda técnica conocida del MVP
 
-- Sustituir la cancelación cooperativa por administración explícita de procesos.
+- Ampliar la cancelación explícita del proceso actual a árboles completos de procesos auxiliares.
 - Añadir parser porcelain `-z` para nombres con saltos de línea o secuencias inusuales.
 - Añadir pruebas automatizadas dentro de Blender para registro, paneles y operadores.
 - Añadir localización inglés/español mediante traducciones de Blender.

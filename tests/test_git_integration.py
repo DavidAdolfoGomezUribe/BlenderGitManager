@@ -7,6 +7,7 @@ from pathlib import Path
 
 from blender_git_manager.models import InitConfig
 from blender_git_manager.services.git_service import GitService
+from blender_git_manager.services.process_service import ProcessService
 from blender_git_manager.services.repository_service import RepositoryService
 
 
@@ -17,7 +18,12 @@ class GitIntegrationTests(unittest.TestCase):
             root = Path(temporary) / "TankAssets"
             root.mkdir()
             (root / "tank.txt").write_text("v1", encoding="utf-8")
-            service = RepositoryService(git=GitService(shutil.which("git") or "git"))
+            service = RepositoryService(
+                git=GitService(
+                    shutil.which("git") or "git",
+                    process=ProcessService(echo_console=False),
+                )
+            )
             report = service.initialize_repository(
                 InitConfig(
                     repository_path=root,

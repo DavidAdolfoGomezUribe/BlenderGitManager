@@ -42,6 +42,11 @@ class RedactTextTests(unittest.TestCase):
         )
         self.assertIn("github.com/owner/repository.git", redacted)
 
+    def test_redacts_labeled_oauth_device_code(self):
+        code = "ABCD-EFGH"
+        redacted = self.assert_redacted(f"Copy your one-time code: {code}", code)
+        self.assertIn("***-****", redacted)
+
     def test_preserves_non_sensitive_process_output(self):
         text = "Open this URL to continue: https://github.com/login/device"
         self.assertEqual(redact_text(text), text)
