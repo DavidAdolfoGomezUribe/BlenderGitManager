@@ -1,0 +1,26 @@
+schema_version = "1.0.0"
+
+id = "blender_git_manager"
+version = "0.1.0"
+name = "Blender Git Manager"
+tagline = "Visual Git, Git LFS and GitHub workflows inside Blender"
+maintainer = "David Gomez"
+type = "add-on"
+website = "https://github.com/"
+tags = ["Development", "User Interface"]
+blender_version_min = "4.2.0"
+license = ["SPDX:GPL-3.0-or-later"]
+
+[permissions]
+files = "Manage Blender project files and local Git repositories"
+network = "Authenticate with GitHub and synchronize remote repositories through installed command line tools"
+
+[build]
+paths_exclude_pattern = [
+  "__pycache__/",
+  "/.git/",
+  "/*.zip",
+  "/tests/",
+  "/docs/",
+  "*.pyc",
+]

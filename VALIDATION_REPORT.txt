@@ -1,0 +1,9 @@
+Blender Git Manager MVP validation report
+
+Manifest: OK
+Python compileall: OK
+Unit/integration tests: 12 passed
+Operator identifiers: 22 unique
+Installable ZIP root: OK
+Security scan: all subprocess usage is centralized in ProcessService; shell=False
+SHA256: 81b869e3243da6d038e8d22da80f7378659973ea67ae2798b3b0529ba4309026

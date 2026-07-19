@@ -1,0 +1,34 @@
+# Referencia de archivos
+
+- `blender_manifest.toml`: declara metadatos, versión mínima, licencia y permisos.
+- `__init__.py`: registra preferencias, propiedades, operadores, UI y timer.
+- `constants.py`: valores compartidos, `.gitignore` y patrones LFS.
+- `preferences.py`: ejecutables y comportamiento configurable.
+- `properties.py`: estado que Blender puede dibujar y serializar durante la sesión.
+- `state_sync.py`: consulta los servicios y reconstruye el estado de UI.
+- `models/domain.py`: contratos entre servicios y operadores.
+- `process_service.py`: ejecución segura, timeout y captura de salida.
+- `git_service.py`: API local de Git.
+- `lfs_service.py`: API de Git LFS.
+- `github_service.py`: autenticación y repositorios GitHub mediante CLI.
+- `repository_service.py`: init, gitignore, commit inicial, remoto y clone.
+- `history_parser.py`: divide registros y campos de `git log`.
+- `status_parser.py`: interpreta códigos XY de porcelain v1.
+- `background_task_service.py`: base para un futuro task center persistente.
+- `credential_service.py`: documenta y refuerza la política de secretos.
+- `operators/base.py`: infraestructura Future + timer modal.
+- `operators/authentication.py`: login/logout.
+- `operators/repository.py`: onboarding y asistentes.
+- `operators/staging.py`: stage/unstage/discard.
+- `operators/commits.py`: commit y push opcional.
+- `operators/synchronization.py`: fetch/pull/push/sync.
+- `operators/branches.py`: create/switch con backup.
+- `operators/lfs.py`: track/untrack.
+- `ui/dashboard.py`: composición visual reutilizable.
+- `ui/lists.py`: filas de cambios, commits, ramas y logs.
+- `ui/main_panel.py`: panel N de la Vista 3D.
+- `ui/top_menu.py`: menú principal Git.
+- `utils/validation.py`: evita refs y rutas inválidas.
+- `utils/backups.py`: copia de seguridad timestamp.
+- `utils/formatting.py`: tamaños y redacción de secretos.
+- `tests/`: validación de parsers, procesos y repositorios reales temporales.
