@@ -102,7 +102,13 @@ def _draw_changes(layout, state):
     commit.prop(state, "save_before_commit")
     staged_count = sum(1 for item in state.changes if item.staged)
     commit.label(text=f"Staged files: {staged_count}")
+    if state.active_branch == "Detached HEAD":
+        commit.label(
+            text="Create or switch to a branch before committing this historical version.",
+            icon="ERROR",
+        )
     row = commit.row(align=True)
+    row.enabled = state.active_branch != "Detached HEAD"
     operator = row.operator("git_manager.commit", text="Commit", icon="CHECKMARK")
     operator.push_after = False
     operator = row.operator("git_manager.commit", text="Commit and Push", icon="EXPORT")
@@ -110,9 +116,22 @@ def _draw_changes(layout, state):
 
 
 def _draw_history(layout, state):
+    layout.label(
+        text="Double-click a commit to load its files and reopen the current Blender scene.",
+        icon="INFO",
+    )
     layout.template_list("GITMANAGER_UL_commits", "", state, "commits", state, "commits_index", rows=12)
     if 0 <= state.commits_index < len(state.commits):
         commit = state.commits[state.commits_index]
+        action = layout.row(align=True)
+        operator = action.operator(
+            "git_manager.history_commit_click",
+            text="Load Selected Commit",
+            icon="FILE_REFRESH",
+        )
+        operator.commit_hash = commit.full_hash
+        operator.commit_index = state.commits_index
+        operator.load_immediately = True
         details = layout.box()
         details.label(text=commit.subject, icon="INFO")
         details.label(text=f"Hash: {commit.full_hash}")
@@ -128,7 +147,7 @@ def _draw_history(layout, state):
 def _draw_branches(layout, state):
     row = layout.row(align=True)
     row.operator("git_manager.create_branch", icon="ADD")
-    row.label(text="Branch switching is blocked while the .blend has unsaved changes.")
+    row.label(text="Branch switching requires a clean repository and a saved .blend.")
     layout.template_list("GITMANAGER_UL_branches", "", state, "branches", state, "branches_index", rows=12)
 
 

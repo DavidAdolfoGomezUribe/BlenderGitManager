@@ -188,7 +188,7 @@ class QuickSaveWorkflowTests(unittest.TestCase):
         add_all = Mock()
 
         with (
-            patch.object(self.service, "active_branch", return_value="main"),
+            patch.object(self.service, "head_branch", return_value="main"),
             patch.object(self.service, "remotes", return_value=[]),
             patch.object(self.service, "config_get", return_value=""),
             patch.object(self.service, "status", side_effect=AssertionError("status must follow remote preflight")),
@@ -281,7 +281,7 @@ class PushCurrentTests(unittest.TestCase):
             return values.get(key, "")
 
         with (
-            patch.object(self.service, "active_branch", return_value="topic"),
+            patch.object(self.service, "head_branch", return_value="topic"),
             patch.object(self.service, "remotes", return_value=[remote]),
             patch.object(self.service, "config_get", side_effect=config_value),
             patch.object(self.service, "_push_checked", return_value=pushed) as push_checked,
@@ -299,7 +299,7 @@ class PushCurrentTests(unittest.TestCase):
         pushed = command_result(("push", "-u", "origin", "feature/materials:refs/heads/feature/materials"))
 
         with (
-            patch.object(self.service, "active_branch", return_value="feature/materials"),
+            patch.object(self.service, "head_branch", return_value="feature/materials"),
             patch.object(self.service, "remotes", return_value=[remote]),
             patch.object(self.service, "config_get", return_value=""),
             patch.object(self.service, "_push_checked", return_value=pushed) as push_checked,
@@ -333,7 +333,7 @@ class PushCurrentTests(unittest.TestCase):
         ]
 
         with (
-            patch.object(self.service, "active_branch", return_value="feature/materials"),
+            patch.object(self.service, "head_branch", return_value="feature/materials"),
             patch.object(self.service, "remotes", return_value=[remote]),
             patch.object(self.service, "config_get", return_value=""),
         ):

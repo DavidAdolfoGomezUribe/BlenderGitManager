@@ -200,16 +200,24 @@ class RepositoryService:
         if not repository_root:
             raise GitCommandError("No Git repository was detected.")
         commits = self.git.history(repository_root, history_limit)
+        head_commit = self.git.head_commit(repository_root)
+        last_commit = next(
+            (commit for commit in commits if commit.full_hash == head_commit),
+            None,
+        )
+        if head_commit and last_commit is None:
+            last_commit = self.git.commit_info(repository_root, head_commit)
         remotes = self.git.remotes(repository_root)
         return RepositorySnapshot(
             root=repository_root,
             name=repository_root.name,
-            active_branch=self.git.active_branch(repository_root),
+            active_branch=self.git.head_branch(repository_root),
+            head_commit=head_commit,
             remotes=tuple(remotes),
             changes=tuple(self.git.status(repository_root)),
             commits=tuple(commits),
             branches=tuple(self.git.branches(repository_root)),
             sync=self.git.sync_status(repository_root),
             lfs_active=self.lfs.is_active(repository_root),
-            last_commit=commits[0] if commits else None,
+            last_commit=last_commit,
         )

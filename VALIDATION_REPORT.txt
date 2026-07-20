@@ -1,12 +1,14 @@
 Blender Git Manager MVP validation report
 
-Version: 0.1.5
+Version: 0.1.6
 Manifest: OK (Blender 5.2 extension validate)
 Python compileall: OK
-Unit/integration tests: 80 passed (CPython 3.13 and Blender 5.2 embedded Python)
+Unit/integration tests: 100 passed (CPython 3.13)
 Blender register/unregister smoke test: OK (Blender 5.2 LTS)
-Branch reload smoke: OK (scene reload, corrupt-file rollback, failing post-checkout hook)
-Operator identifiers: 25 unique
+Branch reload smoke: OK (scene reload, corrupt-file rollback, failing post-checkout hook, attached/detached HEAD)
+Commit checkout smoke: OK (double-click target, whole-tree checkout, scene reload, corrupt/missing/LFS rollback)
+Detached branch smoke: OK (branch creation and switching after loading a historical commit)
+Operator identifiers: 27 unique
 Installable ZIP root: OK
 Security scan: subprocess usage is centralized in ProcessService; shell=False; logs are redacted
-SHA256: 7996BBAD34081D4B33519B4FDCCFAA16986ED31CAB4BB54F3DF3D647641A6925
+SHA256: 42F49FD6EC35448950B462AA0A3276A3FF556C9684AC2F2EAB2A515918AD4BEC

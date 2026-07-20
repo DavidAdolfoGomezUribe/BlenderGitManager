@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 ADDON_NAME = "Blender Git Manager"
-ADDON_VERSION = (0, 1, 5)
+ADDON_VERSION = (0, 1, 6)
 DEFAULT_BRANCH = "main"
 DEFAULT_REMOTE = "origin"
 MAX_HISTORY_COMMITS = 100
@@ -39,6 +39,7 @@ DEFAULT_GITIGNORE = """# Blender automatic backups
 *.blend.tmp
 *.tmp
 *.temp
+.blender_git_backups/
 
 # Python cache
 __pycache__/

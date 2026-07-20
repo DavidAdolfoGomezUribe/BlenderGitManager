@@ -138,6 +138,7 @@ class RepositorySnapshot:
     root: Path
     name: str
     active_branch: str
+    head_commit: str = ""
     remotes: tuple[RemoteInfo, ...] = ()
     changes: tuple[FileChange, ...] = ()
     commits: tuple[CommitInfo, ...] = ()

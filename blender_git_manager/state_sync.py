@@ -173,6 +173,7 @@ def refresh_repository_state(context: bpy.types.Context, include_dependencies: b
         item.decorations = commit.decorations
         item.parent_hashes = " ".join(commit.parent_hashes)
         item.is_merge = commit.is_merge
+        item.is_head = bool(snapshot.head_commit and commit.full_hash == snapshot.head_commit)
 
     state.branches.clear()
     for branch in snapshot.branches:

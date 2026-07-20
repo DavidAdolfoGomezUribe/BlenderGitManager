@@ -36,6 +36,7 @@ class GitCommitItem(bpy.types.PropertyGroup):
     decorations: StringProperty()
     parent_hashes: StringProperty()
     is_merge: BoolProperty(default=False)
+    is_head: BoolProperty(default=False)
 
 
 class GitBranchItem(bpy.types.PropertyGroup):

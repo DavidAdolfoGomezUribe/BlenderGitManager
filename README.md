@@ -35,6 +35,7 @@ Esta entrega implementa una base ejecutable del **MVP** descrito en el documento
 - Detección de upstream, commits ahead y behind.
 - Historial estructurado de hasta 100 commits.
 - Detalles básicos del commit seleccionado.
+- Doble clic sobre un commit para materializar todo su árbol y recargar la escena en `Detached HEAD`.
 - Lista de ramas locales y remotas.
 - Creación y cambio de rama con respaldo previo y recarga automática del `.blend` de la rama destino.
 - Gestión inicial de patrones Git LFS.
@@ -54,7 +55,7 @@ El complemento continúa ofreciendo Git local cuando GitHub CLI no está instala
 
 ## Instalación rápida
 
-1. Descarga `blender_git_manager-0.1.5.zip`.
+1. Descarga `blender_git_manager-0.1.6.zip`.
 2. En Blender abre **Edit > Preferences > Add-ons** o **Extensions**.
 3. Selecciona **Install from Disk**.
 4. Elige el ZIP sin descomprimirlo.
@@ -97,6 +98,8 @@ blender_git_manager/
 │   ├── commits.py               Commit, Commit + Push y Quick Save
 │   ├── synchronization.py       Fetch, pull, push y sync
 │   ├── branches.py              Crear y cambiar ramas
+│   ├── history.py               Checkout de commits y recarga segura de la escena
+│   ├── history_interaction.py   Doble clic y selección en la vista History
 │   ├── lfs.py                   Track y untrack de patrones LFS
 │   └── common.py                Refresh, carpetas, navegador y preferencias
 ├── services/
@@ -119,6 +122,7 @@ blender_git_manager/
 └── utils/
     ├── __init__.py
     ├── backups.py               Respaldo timestamp del archivo Blender
+    ├── checkout.py              Planificación y rollback seguro del árbol Git
     ├── formatting.py            Tamaños y redacción de argumentos
     ├── paths.py                 Normalización y relación entre rutas
     └── validation.py            Validación de refs, nombres y carpetas

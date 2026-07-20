@@ -24,10 +24,19 @@ class GITMANAGER_UL_changes(bpy.types.UIList):
 class GITMANAGER_UL_commits(bpy.types.UIList):
     def draw_item(self, _context, layout, _data, item, _icon, _active_data, _active_propname, _index):
         row = layout.row(align=True)
-        row.label(text="●")
-        row.label(text=item.short_hash)
-        row.label(text=item.subject)
-        row.label(text=item.author_name, icon="USER")
+        row.operator_context = "INVOKE_DEFAULT"
+        is_head = bool(getattr(item, "is_head", False))
+        marker = "HEAD  " if is_head else ""
+        text = f"{marker}{item.short_hash}    {item.subject}    - {item.author_name}"
+        operator = row.operator(
+            "git_manager.history_commit_click",
+            text=text,
+            icon="RADIOBUT_ON" if is_head else "DOT",
+            emboss=False,
+        )
+        operator.commit_hash = item.full_hash
+        operator.commit_index = _index
+        operator.load_immediately = False
 
 
 class GITMANAGER_UL_branches(bpy.types.UIList):

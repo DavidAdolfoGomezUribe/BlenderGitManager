@@ -26,7 +26,7 @@ class BlenderGitManagerPreferences(bpy.types.AddonPreferences):
         default=shutil.which("gh") or "gh",
     )
     save_blend_before_commit: BoolProperty(name="Save .blend before commit", default=True)
-    create_backup_before_checkout: BoolProperty(name="Create backup before branch switch", default=True)
+    create_backup_before_checkout: BoolProperty(name="Create backup before branch or commit checkout", default=True)
     refresh_automatically: BoolProperty(name="Refresh repository automatically", default=False)
     refresh_interval: FloatProperty(name="Refresh interval", default=5.0, min=2.0, max=300.0, subtype="TIME")
     default_remote: StringProperty(name="Default remote", default="origin")

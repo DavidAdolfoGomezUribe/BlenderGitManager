@@ -15,6 +15,16 @@ class GITMANAGER_OT_commit(AsyncModalMixin, bpy.types.Operator):
 
     push_after: BoolProperty(default=False)
 
+    @classmethod
+    def poll(cls, context):
+        state = getattr(getattr(context, "scene", None), "git_manager", None)
+        if state is not None and state.active_branch == "Detached HEAD":
+            cls.poll_message_set(
+                "Switch to a branch or create one from this commit before committing."
+            )
+            return False
+        return True
+
     def execute(self, context):
         state = context.scene.git_manager
         if reject_if_task_running(self, context):
@@ -24,6 +34,27 @@ class GITMANAGER_OT_commit(AsyncModalMixin, bpy.types.Operator):
             return {"CANCELLED"}
         if not state.commit_message.strip():
             self.report({"ERROR"}, "Commit message cannot be empty.")
+            return {"CANCELLED"}
+
+        git, _lfs, _github, _repository = build_services(context)
+        repository_root = git.detect_root(state.repository_path)
+        if repository_root is None:
+            self.report({"ERROR"}, "The selected folder is not an initialized Git repository.")
+            return {"CANCELLED"}
+        try:
+            active_branch = git.head_branch(repository_root)
+        except Exception as exc:
+            message = f"Could not determine the active Git branch: {exc}"
+            self.report({"ERROR"}, message)
+            append_output(context, message, "ERROR")
+            return {"CANCELLED"}
+        if not active_branch:
+            message = (
+                "Commits are disabled in detached HEAD. Switch to a branch or create a new "
+                "branch from this commit first."
+            )
+            self.report({"ERROR"}, message)
+            append_output(context, message, "ERROR")
             return {"CANCELLED"}
 
         preferences = get_addon_preferences(context)
@@ -38,8 +69,7 @@ class GITMANAGER_OT_commit(AsyncModalMixin, bpy.types.Operator):
                 self.report({"ERROR"}, f"Could not save Blender file: {exc}")
                 return {"CANCELLED"}
 
-        git, _lfs, _github, _repository = build_services(context)
-        staged = git.staged_files(state.repository_path)
+        staged = git.staged_files(repository_root)
         if not staged:
             self.report({"ERROR"}, "There are no staged files.")
             return {"CANCELLED"}
@@ -47,7 +77,7 @@ class GITMANAGER_OT_commit(AsyncModalMixin, bpy.types.Operator):
         message = state.commit_message
         description = state.commit_description
         remote = preferences.default_remote
-        repository_path = str(state.repository_path)
+        repository_path = str(repository_root)
         push_after = bool(self.push_after)
 
         def worker():
@@ -96,6 +126,11 @@ class GITMANAGER_OT_quick_save(AsyncModalMixin, bpy.types.Operator):
         if state.task_running:
             cls.poll_message_set(f"Wait for the current Git task to finish: {state.task_label}")
             return False
+        if state.active_branch == "Detached HEAD":
+            cls.poll_message_set(
+                "Switch to a branch or create one from this commit before using Quick Save."
+            )
+            return False
         return True
 
     def execute(self, context):
@@ -103,8 +138,29 @@ class GITMANAGER_OT_quick_save(AsyncModalMixin, bpy.types.Operator):
         if reject_if_task_running(self, context):
             return {"CANCELLED"}
 
+        git, _lfs, _github, _repository = build_services(context)
+        root = git.detect_root(state.repository_path)
+        if root is None:
+            self.report({"ERROR"}, "The selected folder is not an initialized Git repository.")
+            return {"CANCELLED"}
+        try:
+            active_branch = git.head_branch(root)
+        except Exception as exc:
+            message = f"Could not determine the active Git branch: {exc}"
+            self.report({"ERROR"}, message)
+            append_output(context, message, "ERROR")
+            return {"CANCELLED"}
+        if not active_branch:
+            message = (
+                "Quick Save is disabled in detached HEAD. Switch to a branch or create a new "
+                "branch from this commit first."
+            )
+            self.report({"ERROR"}, message)
+            append_output(context, message, "ERROR")
+            return {"CANCELLED"}
+
         preferences = get_addon_preferences(context)
-        repository_path = str(state.repository_path)
+        repository_path = str(root)
         remote = str(preferences.default_remote)
 
         if state.save_before_commit and preferences.save_blend_before_commit:
@@ -118,12 +174,7 @@ class GITMANAGER_OT_quick_save(AsyncModalMixin, bpy.types.Operator):
                 self.report({"ERROR"}, f"Could not save Blender file: {exc}")
                 return {"CANCELLED"}
 
-        git, _lfs, _github, _repository = build_services(context)
-
         def worker():
-            root = git.detect_root(repository_path)
-            if root is None:
-                raise RuntimeError("The selected folder is not an initialized Git repository.")
             return git.quick_save(root, remote)
 
         return self.start_async(
