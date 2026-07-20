@@ -28,6 +28,14 @@ class CommandResult:
 
 
 @dataclass(slots=True)
+class QuickSaveResult:
+    message: str
+    branch: str
+    commit: CommandResult
+    push: CommandResult
+
+
+@dataclass(slots=True)
 class DependencyStatus:
     name: str
     executable: str

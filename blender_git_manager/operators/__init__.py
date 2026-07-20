@@ -5,7 +5,7 @@ from .authentication import (
     GITMANAGER_OT_show_github_device_code,
 )
 from .branches import GITMANAGER_OT_create_branch, GITMANAGER_OT_switch_branch
-from .commits import GITMANAGER_OT_commit
+from .commits import GITMANAGER_OT_commit, GITMANAGER_OT_quick_save
 from .common import GITMANAGER_OT_open_folder, GITMANAGER_OT_open_preferences, GITMANAGER_OT_open_remote, GITMANAGER_OT_refresh
 from .lfs import GITMANAGER_OT_lfs_track, GITMANAGER_OT_lfs_untrack
 from .repository import (
@@ -40,6 +40,7 @@ CLASSES = (
     GITMANAGER_OT_unstage,
     GITMANAGER_OT_discard_changes,
     GITMANAGER_OT_commit,
+    GITMANAGER_OT_quick_save,
     GITMANAGER_OT_synchronize,
     GITMANAGER_OT_create_branch,
     GITMANAGER_OT_switch_branch,

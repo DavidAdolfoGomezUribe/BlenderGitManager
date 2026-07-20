@@ -44,15 +44,13 @@ class GITMANAGER_OT_commit(AsyncModalMixin, bpy.types.Operator):
         message = state.commit_message
         description = state.commit_description
         remote = preferences.default_remote
-        branch = state.active_branch
+        repository_path = str(state.repository_path)
+        push_after = bool(self.push_after)
 
         def worker():
-            commit_result = git.commit(state.repository_path, message, description)
-            if self.push_after:
-                try:
-                    git.push(state.repository_path, remote)
-                except Exception:
-                    git.push(state.repository_path, remote, branch, set_upstream=True)
+            commit_result = git.commit(repository_path, message, description)
+            if push_after:
+                git.push_current(repository_path, remote)
             return commit_result
 
         return self.start_async(
@@ -67,4 +65,76 @@ class GITMANAGER_OT_commit(AsyncModalMixin, bpy.types.Operator):
         state.commit_message = ""
         state.commit_description = ""
         append_output(context, result.stdout or "Commit created.", "SUCCESS")
+        refresh_repository_state(context, include_dependencies=False)
+
+
+class GITMANAGER_OT_quick_save(AsyncModalMixin, bpy.types.Operator):
+    bl_idname = "git_manager.quick_save"
+    bl_label = "Quick Save"
+    bl_description = (
+        "Save the Blender file, stage all repository changes, create an incremental "
+        "Quick Save commit, and push the active branch"
+    )
+
+    @classmethod
+    def poll(cls, context):
+        scene = getattr(context, "scene", None)
+        state = getattr(scene, "git_manager", None)
+        if state is None or not state.repository_path:
+            cls.poll_message_set("You must initialize a repository before using Quick Save.")
+            return False
+        if state.task_running:
+            cls.poll_message_set(f"Wait for the current Git task to finish: {state.task_label}")
+            return False
+        return True
+
+    def execute(self, context):
+        state = context.scene.git_manager
+        if state.task_running:
+            self.report({"WARNING"}, f"Another Git task is already running: {state.task_label}")
+            return {"CANCELLED"}
+
+        preferences = get_addon_preferences(context)
+        repository_path = str(state.repository_path)
+        remote = str(preferences.default_remote)
+
+        if state.save_before_commit and preferences.save_blend_before_commit:
+            if not bpy.data.filepath:
+                self.report({"ERROR"}, "Save the Blender file before using Quick Save.")
+                return {"CANCELLED"}
+            try:
+                bpy.ops.wm.save_mainfile()
+                append_output(context, "Blender file saved before Quick Save.", "SUCCESS")
+            except Exception as exc:
+                self.report({"ERROR"}, f"Could not save Blender file: {exc}")
+                return {"CANCELLED"}
+
+        git, _lfs, _github, _repository = build_services(context)
+
+        def worker():
+            root = git.detect_root(repository_path)
+            if root is None:
+                raise RuntimeError("The selected folder is not an initialized Git repository.")
+            return git.quick_save(root, remote)
+
+        return self.start_async(
+            context,
+            "Quick Save",
+            worker,
+            process=git.process,
+        )
+
+    def on_async_success(self, context, result):
+        message = f"{result.message} committed and pushed from branch {result.branch}."
+        append_output(context, message, "SUCCESS")
+        self.report({"INFO"}, message)
+        refresh_repository_state(context, include_dependencies=False)
+
+    def on_async_cancel(self, context):
+        message = (
+            "Quick Save was cancelled. Check History because the local commit may already "
+            "exist if cancellation happened during push."
+        )
+        append_output(context, message, "WARNING")
+        self.report({"WARNING"}, message)
         refresh_repository_state(context, include_dependencies=False)

@@ -29,6 +29,7 @@ Esta entrega implementa una base ejecutable del **MVP** descrito en el documento
 - Campo visual para título y descripción del commit.
 - Guardado automático de Blender antes del commit.
 - Commit y Commit + Push.
+- Quick Save desde el menú superior: prepara todos los cambios, crea `Quick Save N` y publica la rama activa.
 - Fetch, Pull `--ff-only`, Push y Sync.
 - Detección de upstream, commits ahead y behind.
 - Historial estructurado de hasta 100 commits.
@@ -52,7 +53,7 @@ El complemento continúa ofreciendo Git local cuando GitHub CLI no está instala
 
 ## Instalación rápida
 
-1. Descarga `blender_git_manager-0.1.2.zip`.
+1. Descarga `blender_git_manager-0.1.3.zip`.
 2. En Blender abre **Edit > Preferences > Add-ons** o **Extensions**.
 3. Selecciona **Install from Disk**.
 4. Elige el ZIP sin descomprimirlo.
@@ -92,7 +93,7 @@ blender_git_manager/
 │   ├── authentication.py        Login y logout de GitHub CLI
 │   ├── repository.py            Init, open, clone, remote y GitHub repo
 │   ├── staging.py               Stage, unstage y discard
-│   ├── commits.py               Commit y Commit + Push
+│   ├── commits.py               Commit, Commit + Push y Quick Save
 │   ├── synchronization.py       Fetch, pull, push y sync
 │   ├── branches.py              Crear y cambiar ramas
 │   ├── lfs.py                   Track y untrack de patrones LFS
@@ -148,11 +149,14 @@ git config user.name ...
 git config user.email ...
 git status --porcelain=v1 --untracked-files=all
 git add -- <archivos>
+git add --all
 git restore --staged -- <archivos>
 git commit -m <título> -m <descripción>
+git commit -m "Quick Save N"
 git fetch origin --prune
 git pull --ff-only
 git push origin
+git push [-u] <remoto> <rama>:refs/heads/<rama-remota>
 git log --all --pretty=format:<formato estructurado>
 git for-each-ref ...
 git lfs install --local

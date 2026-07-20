@@ -16,15 +16,7 @@ class GITMANAGER_MT_git(bpy.types.Menu):
         layout.operator("git_manager.open_repository", icon="FILE_FOLDER")
         layout.operator("git_manager.clone_repository", icon="IMPORT")
         layout.separator()
-        layout.operator("git_manager.refresh", text="Repository Status", icon="FILE_REFRESH")
-        if state.repository_path:
-            operator = layout.operator("git_manager.commit", text="Save and Commit", icon="CHECKMARK")
-            operator.push_after = False
-            for operation, label in (("PULL", "Pull"), ("PUSH", "Push"), ("FETCH", "Fetch")):
-                operator = layout.operator("git_manager.synchronize", text=label)
-                operator.operation = operation
-            layout.operator("git_manager.create_branch", text="Branches", icon="OUTLINER_OB_ARMATURE")
-            layout.operator("git_manager.lfs_track", text="Git LFS", icon="PACKAGE")
+        layout.operator("git_manager.quick_save", text="Quick Save", icon="FILE_TICK")
         layout.separator()
         if state.github_authenticated:
             layout.operator("git_manager.github_logout", text="Disconnect GitHub", icon="UNLINKED")

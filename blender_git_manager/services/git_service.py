@@ -2,15 +2,18 @@
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 from typing import Iterable
 
 from ..constants import MAX_HISTORY_COMMITS
-from ..models import BranchInfo, CommitInfo, FileChange, RemoteInfo, SyncStatus
+from ..models import BranchInfo, CommitInfo, FileChange, QuickSaveResult, RemoteInfo, SyncStatus
 from ..utils.validation import validate_branch_name, validate_commit_message, validate_tag_name
 from .history_parser import FIELD_SEPARATOR, RECORD_SEPARATOR, parse_git_log
 from .process_service import ProcessService
 from .status_parser import parse_porcelain_v1
+
+_QUICK_SAVE_SUBJECT = re.compile(r"^Quick Save ([1-9]\d*)$")
 
 
 class GitCommandError(RuntimeError):
@@ -135,6 +138,98 @@ class GitService:
             arguments.append(branch)
         return self._run_checked(arguments, cwd, timeout=1800)
 
+    def current_upstream(self, cwd: str | Path) -> str:
+        result = self._run(
+            ["rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{upstream}"],
+            cwd,
+            timeout=15,
+        )
+        return result.stdout.strip() if result.successful else ""
+
+    def _current_push_plan(self, cwd: str | Path, fallback_remote: str) -> tuple[str, str, str, bool]:
+        branch = self.active_branch(cwd)
+        if not branch:
+            raise GitCommandError("Pushing requires an active branch and cannot run in detached HEAD.")
+
+        remote_names = {remote.name for remote in self.remotes(cwd)}
+        upstream_remote = self.config_get(f"branch.{branch}.remote", cwd)
+        upstream_merge_ref = self.config_get(f"branch.{branch}.merge", cwd)
+        if upstream_remote or upstream_merge_ref:
+            if not upstream_remote or not upstream_merge_ref:
+                raise GitCommandError(f"The upstream configuration for branch '{branch}' is incomplete.")
+            if upstream_remote != "." and upstream_remote not in remote_names:
+                raise GitCommandError(f"Upstream remote '{upstream_remote}' is not configured.")
+            if not upstream_merge_ref.startswith("refs/heads/"):
+                raise GitCommandError(
+                    f"The upstream branch for '{branch}' is not a publishable remote branch."
+                )
+            return branch, upstream_remote, upstream_merge_ref, False
+
+        if fallback_remote not in remote_names:
+            raise GitCommandError(
+                f"Remote '{fallback_remote}' is not configured. Connect a remote before pushing."
+            )
+        return branch, fallback_remote, f"refs/heads/{branch}", True
+
+    def push_current(
+        self,
+        cwd: str | Path,
+        fallback_remote: str = "origin",
+        expected_branch: str = "",
+    ):
+        branch, remote, remote_ref, set_upstream = self._current_push_plan(cwd, fallback_remote)
+        if expected_branch and branch != expected_branch:
+            raise GitCommandError(
+                f"The active branch changed from '{expected_branch}' to '{branch}' before push."
+            )
+        arguments = ["push"]
+        if set_upstream:
+            arguments.append("-u")
+        arguments.extend([remote, f"{branch}:{remote_ref}"])
+        return self._run_checked(arguments, cwd, timeout=1800)
+
+    def next_quick_save_number(self, cwd: str | Path) -> int:
+        result = self._run_checked(
+            ["rev-list", "--all", "--no-commit-header", "--format=%s"],
+            cwd,
+            timeout=120,
+        )
+        highest = 0
+        for subject in result.stdout.splitlines():
+            match = _QUICK_SAVE_SUBJECT.fullmatch(subject)
+            if match:
+                highest = max(highest, int(match.group(1)))
+        return highest + 1
+
+    def quick_save(self, cwd: str | Path, remote: str = "origin") -> QuickSaveResult:
+        root = Path(cwd).expanduser().resolve(strict=False)
+        branch, _remote, _remote_ref, _set_upstream = self._current_push_plan(root, remote)
+
+        conflicts = [change.path for change in self.status(root) if change.conflicted]
+        if conflicts:
+            raise GitCommandError("Resolve repository conflicts before using Quick Save.")
+
+        self.add_all(root)
+        if not self.staged_files(root):
+            raise GitCommandError("There are no changes to quick save.")
+
+        message = f"Quick Save {self.next_quick_save_number(root)}"
+        commit_result = self.commit(root, message)
+        try:
+            push_result = self.push_current(root, remote, expected_branch=branch)
+        except Exception as exc:
+            raise GitCommandError(
+                f"{message} was committed locally, but push failed: {exc}",
+                getattr(exc, "stderr", ""),
+            ) from exc
+
+        return QuickSaveResult(
+            message=message,
+            branch=branch,
+            commit=commit_result,
+            push=push_result,
+        )
+
     def sync(self, cwd: str | Path, remote: str = "origin"):
         self.fetch(cwd, remote)
         self.pull(cwd)
@@ -221,10 +316,9 @@ class GitService:
         return self._run_checked(arguments, cwd, timeout=60)
 
     def sync_status(self, cwd: str | Path) -> SyncStatus:
-        upstream_result = self._run(["rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{upstream}"], cwd, timeout=15)
-        if not upstream_result.successful:
+        upstream = self.current_upstream(cwd)
+        if not upstream:
             return SyncStatus()
-        upstream = upstream_result.stdout.strip()
         counts = self._run(["rev-list", "--left-right", "--count", "HEAD...@{upstream}"], cwd, timeout=30)
         if not counts.successful:
             return SyncStatus(upstream=upstream)
