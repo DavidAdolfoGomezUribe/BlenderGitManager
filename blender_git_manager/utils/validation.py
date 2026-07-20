@@ -4,6 +4,7 @@ import os
 import re
 import tempfile
 from pathlib import Path
+from urllib.parse import urlsplit
 
 
 class ValidationError(ValueError):
@@ -47,6 +48,29 @@ def validate_repository_name(value: str) -> str:
     if name in {".", ".."}:
         raise ValidationError("Repository name is invalid.")
     return name
+
+
+def validate_remote_url(value: str) -> str:
+    url = value.strip()
+    if not url:
+        raise ValidationError("Remote URL cannot be empty.")
+    if "\x00" in url or "\r" in url or "\n" in url:
+        raise ValidationError("Remote URL contains invalid characters.")
+
+    try:
+        parsed = urlsplit(url)
+    except ValueError as exc:
+        raise ValidationError("Remote URL is invalid.") from exc
+    if parsed.password is not None or (
+        parsed.scheme.lower() in {"http", "https"} and parsed.username is not None
+    ):
+        raise ValidationError(
+            "Remote URLs must not contain embedded credentials. "
+            "Use Git Credential Manager or GitHub CLI authentication instead."
+        )
+    if parsed.scheme.lower() in {"http", "https"} and (parsed.query or parsed.fragment):
+        raise ValidationError("Remote HTTP(S) URLs must not contain query parameters or fragments.")
+    return url
 
 
 

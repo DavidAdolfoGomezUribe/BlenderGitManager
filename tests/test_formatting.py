@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import unittest
 
-from blender_git_manager.utils.formatting import redact_text
+from blender_git_manager.utils.formatting import redact_text, strip_url_credentials
 
 
 class RedactTextTests(unittest.TestCase):
@@ -41,6 +41,22 @@ class RedactTextTests(unittest.TestCase):
             secret,
         )
         self.assertIn("github.com/owner/repository.git", redacted)
+        self.assertEqual(
+            strip_url_credentials(
+                f"https://test-user:{secret}@github.com/owner/repository.git"
+            ),
+            "https://github.com/owner/repository.git",
+        )
+        self.assertEqual(
+            strip_url_credentials(
+                f"ssh://git:{secret}@github.com/owner/repository.git"
+            ),
+            "ssh://git@github.com/owner/repository.git",
+        )
+        self.assertEqual(
+            strip_url_credentials("ssh://git@github.com/owner/repository.git"),
+            "ssh://git@github.com/owner/repository.git",
+        )
 
     def test_redacts_labeled_oauth_device_code(self):
         code = "ABCD-EFGH"

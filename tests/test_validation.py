@@ -7,6 +7,7 @@ from blender_git_manager.utils.validation import (
     validate_branch_name,
     validate_commit_message,
     validate_email,
+    validate_remote_url,
     validate_repository_name,
     validate_tag_name,
 )
@@ -25,6 +26,30 @@ class ValidationTests(unittest.TestCase):
         self.assertEqual(validate_repository_name("Tank-Assets_01"), "Tank-Assets_01")
         with self.assertRaises(ValidationError):
             validate_repository_name("Tank Assets")
+
+    def test_remote_url_rejects_embedded_credentials(self):
+        self.assertEqual(
+            validate_remote_url(" https://github.com/octo/assets.git "),
+            "https://github.com/octo/assets.git",
+        )
+        self.assertEqual(
+            validate_remote_url("git@github.com:octo/assets.git"),
+            "git@github.com:octo/assets.git",
+        )
+        self.assertEqual(
+            validate_remote_url("ssh://git@github.com/octo/assets.git"),
+            "ssh://git@github.com/octo/assets.git",
+        )
+        for value in (
+            "https://user:token@github.com/octo/assets.git",
+            "https://user@github.com/octo/assets.git",
+            "https://github.com/octo/assets.git?token=secret",
+            "https://github.com/octo/assets.git#token=secret",
+            "ssh://git:secret@github.com/octo/assets.git",
+            "https://[malformed/repository.git",
+        ):
+            with self.subTest(value=value), self.assertRaises(ValidationError):
+                validate_remote_url(value)
 
     def test_commit_message(self):
         self.assertEqual(validate_commit_message(" Initial commit "), "Initial commit")

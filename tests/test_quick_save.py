@@ -4,7 +4,7 @@ import shutil
 import tempfile
 import unittest
 from pathlib import Path
-from unittest.mock import Mock, patch
+from unittest.mock import Mock, call, patch
 
 from blender_git_manager.models import CommandResult, RemoteInfo
 from blender_git_manager.services.git_service import GitCommandError, GitService
@@ -225,6 +225,44 @@ class QuickSaveWorkflowTests(unittest.TestCase):
         self.assertIs(result.push, push_result)
         push_current.assert_called_once()
 
+    def test_push_failure_preserves_all_recovery_attempts(self):
+        commit_result = command_result(("commit", "-m", "Quick Save 3"))
+        first_attempt = command_result(
+            ("push", "-u", "origin", "topic:refs/heads/topic"),
+            return_code=1,
+            stderr="first Git LFS failure",
+        )
+        second_attempt = command_result(
+            ("-c", "lfs.example=false", "push", "-u", "origin", "topic:refs/heads/topic"),
+            return_code=1,
+            stderr="second Git LFS failure",
+        )
+        push_error = GitCommandError(
+            "Push failed after recovery.",
+            "[Push attempt 1]\nfirst\n\n[Push attempt 2]\nsecond",
+            (first_attempt, second_attempt),
+        )
+
+        with (
+            patch.object(
+                self.service,
+                "_current_push_plan",
+                return_value=("topic", "origin", "refs/heads/topic", True),
+            ),
+            patch.object(self.service, "status", return_value=[]),
+            patch.object(self.service, "add_all", return_value=command_result(("add", "--all"))),
+            patch.object(self.service, "staged_files", return_value=["scene.blend"]),
+            patch.object(self.service, "next_quick_save_number", return_value=3),
+            patch.object(self.service, "commit", return_value=commit_result),
+            patch.object(self.service, "push_current", side_effect=push_error),
+        ):
+            with self.assertRaises(GitCommandError) as captured:
+                self.service.quick_save(self.repository)
+
+        self.assertEqual(captured.exception.attempts, (first_attempt, second_attempt))
+        self.assertEqual(captured.exception.stderr, push_error.stderr)
+        self.assertIn("Quick Save 3 was committed locally", str(captured.exception))
+
 
 class PushCurrentTests(unittest.TestCase):
     def setUp(self):
@@ -246,15 +284,14 @@ class PushCurrentTests(unittest.TestCase):
             patch.object(self.service, "active_branch", return_value="topic"),
             patch.object(self.service, "remotes", return_value=[remote]),
             patch.object(self.service, "config_get", side_effect=config_value),
-            patch.object(self.service, "_run_checked", return_value=pushed) as run_checked,
+            patch.object(self.service, "_push_checked", return_value=pushed) as push_checked,
         ):
             result = self.service.push_current(self.repository, fallback_remote="origin")
 
         self.assertIs(result, pushed)
-        run_checked.assert_called_once_with(
+        push_checked.assert_called_once_with(
             ["push", "team", "topic:refs/heads/review/topic"],
             self.repository,
-            timeout=1800,
         )
 
     def test_missing_upstream_pushes_only_current_branch_and_sets_it(self):
@@ -265,15 +302,55 @@ class PushCurrentTests(unittest.TestCase):
             patch.object(self.service, "active_branch", return_value="feature/materials"),
             patch.object(self.service, "remotes", return_value=[remote]),
             patch.object(self.service, "config_get", return_value=""),
-            patch.object(self.service, "_run_checked", return_value=pushed) as run_checked,
+            patch.object(self.service, "_push_checked", return_value=pushed) as push_checked,
         ):
             result = self.service.push_current(self.repository)
 
         self.assertIs(result, pushed)
-        run_checked.assert_called_once_with(
+        push_checked.assert_called_once_with(
             ["push", "-u", "origin", "feature/materials:refs/heads/feature/materials"],
             self.repository,
-            timeout=1800,
+        )
+
+    def test_missing_upstream_lock_recovery_uses_ephemeral_override(self):
+        remote = RemoteInfo(name="origin", fetch_url="example", push_url="example")
+        key = "lfs.https://github.com/octo-org/assets.git/info/lfs.locksverify"
+        first = command_result(
+            return_code=1,
+            stderr=(
+                'Remote "origin" does not support the Git LFS locking API. '
+                "Consider disabling it with:\n"
+                f"  $ git config {key} false"
+            ),
+        )
+        second = command_result(stderr="Uploading LFS objects: 100%")
+        self.service.process.run.side_effect = (first, second)
+        push_arguments = [
+            "push",
+            "-u",
+            "origin",
+            "feature/materials:refs/heads/feature/materials",
+        ]
+
+        with (
+            patch.object(self.service, "active_branch", return_value="feature/materials"),
+            patch.object(self.service, "remotes", return_value=[remote]),
+            patch.object(self.service, "config_get", return_value=""),
+        ):
+            result = self.service.push_current(self.repository)
+
+        self.assertIs(result, second)
+        self.assertEqual(
+            self.service.process.run.call_args_list,
+            [
+                call("git", push_arguments, self.repository, 1800),
+                call(
+                    "git",
+                    ["-c", f"{key}=false", *push_arguments],
+                    self.repository,
+                    1800,
+                ),
+            ],
         )
 
 

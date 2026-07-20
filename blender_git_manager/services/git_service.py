@@ -7,9 +7,10 @@ from pathlib import Path
 from typing import Iterable
 
 from ..constants import MAX_HISTORY_COMMITS
-from ..models import BranchInfo, CommitInfo, FileChange, QuickSaveResult, RemoteInfo, SyncStatus
+from ..models import BranchInfo, CommandResult, CommitInfo, FileChange, QuickSaveResult, RemoteInfo, SyncStatus
 from ..utils.validation import validate_branch_name, validate_commit_message, validate_tag_name
 from .history_parser import FIELD_SEPARATOR, RECORD_SEPARATOR, parse_git_log
+from .lfs_push_failures import LFSFailureKind, classify_lfs_push_failure, extract_github_locksverify_key
 from .process_service import ProcessService
 from .status_parser import parse_porcelain_v1
 
@@ -17,9 +18,15 @@ _QUICK_SAVE_SUBJECT = re.compile(r"^Quick Save ([1-9]\d*)$")
 
 
 class GitCommandError(RuntimeError):
-    def __init__(self, message: str, stderr: str = "") -> None:
+    def __init__(
+        self,
+        message: str,
+        stderr: str = "",
+        attempts: tuple[CommandResult, ...] = (),
+    ) -> None:
         super().__init__(message)
         self.stderr = stderr
+        self.attempts = attempts
 
 
 class GitService:
@@ -136,7 +143,88 @@ class GitService:
         arguments.append(remote)
         if branch:
             arguments.append(branch)
-        return self._run_checked(arguments, cwd, timeout=1800)
+        return self._push_checked(arguments, cwd)
+
+    @staticmethod
+    def _combined_attempt_output(attempts: list[CommandResult]) -> str:
+        sections: list[str] = []
+        for index, result in enumerate(attempts, start=1):
+            streams: list[str] = []
+            if result.stdout:
+                streams.append(f"[stdout]\n{result.stdout}")
+            if result.stderr:
+                streams.append(f"[stderr]\n{result.stderr}")
+            if streams:
+                sections.append(f"[Push attempt {index}]\n" + "\n".join(streams))
+        return "\n\n".join(sections)
+
+    def _push_checked(self, arguments: list[str], cwd: str | Path):
+        attempts: list[CommandResult] = []
+        lock_fallback_used = False
+        transient_retry_used = False
+        effective_arguments = list(arguments)
+
+        while len(attempts) < 3:
+            result = self._run(effective_arguments, cwd, timeout=1800)
+            attempts.append(result)
+            if result.successful:
+                if lock_fallback_used:
+                    self.process.emit_status(
+                        "WARNING",
+                        "[git-lfs] Push succeeded after temporarily skipping unavailable lock verification.",
+                    )
+                if transient_retry_used:
+                    self.process.emit_status(
+                        "WARNING",
+                        "[git-lfs] Push succeeded after retrying a temporary GitHub LFS server error.",
+                    )
+                return result
+
+            failure = classify_lfs_push_failure(result)
+            if failure == LFSFailureKind.LOCK_VERIFY and not lock_fallback_used:
+                output = "\n".join(part for part in (result.stderr, result.stdout) if part)
+                key = extract_github_locksverify_key(output)
+                if key:
+                    effective_arguments = ["-c", f"{key}=false", *arguments]
+                    lock_fallback_used = True
+                    self.process.emit_status(
+                        "WARNING",
+                        "[git-lfs] Retrying the same push once with lock verification disabled "
+                        "only for this invocation.",
+                    )
+                    continue
+
+            if failure == LFSFailureKind.TRANSIENT_BATCH and not transient_retry_used:
+                self.process.emit_status(
+                    "WARNING",
+                    "[git-lfs] GitHub LFS returned a temporary batch error. Retrying the same push once in 2 seconds.",
+                )
+                if self.process.wait_for_retry(2.0):
+                    transient_retry_used = True
+                    continue
+            break
+
+        combined = self._combined_attempt_output(attempts)
+        final_failure = classify_lfs_push_failure(attempts[-1])
+        if transient_retry_used and final_failure == LFSFailureKind.TRANSIENT_BATCH:
+            raise GitCommandError(
+                "GitHub LFS is still returning a temporary server error after the automatic retry. "
+                "Your commits remain local; use Push to try again later.",
+                combined,
+                tuple(attempts),
+            )
+        if len(attempts) > 1:
+            raise GitCommandError(
+                "Push failed after the automatic Git LFS recovery attempt. Review Git Output for details.",
+                combined,
+                tuple(attempts),
+            )
+        result = attempts[-1]
+        raise GitCommandError(
+            result.stderr or result.stdout or "Git push failed.",
+            result.stderr,
+            tuple(attempts),
+        )
 
     def current_upstream(self, cwd: str | Path) -> str:
         result = self._run(
@@ -186,7 +274,7 @@ class GitService:
         if set_upstream:
             arguments.append("-u")
         arguments.extend([remote, f"{branch}:{remote_ref}"])
-        return self._run_checked(arguments, cwd, timeout=1800)
+        return self._push_checked(arguments, cwd)
 
     def next_quick_save_number(self, cwd: str | Path) -> int:
         result = self._run_checked(
@@ -221,6 +309,7 @@ class GitService:
             raise GitCommandError(
                 f"{message} was committed locally, but push failed: {exc}",
                 getattr(exc, "stderr", ""),
+                getattr(exc, "attempts", ()),
             ) from exc
 
         return QuickSaveResult(
@@ -232,8 +321,9 @@ class GitService:
 
     def sync(self, cwd: str | Path, remote: str = "origin"):
         self.fetch(cwd, remote)
-        self.pull(cwd)
-        return self.push(cwd, remote)
+        if self.current_upstream(cwd):
+            self.pull(cwd)
+        return self.push_current(cwd, remote)
 
     def remotes(self, cwd: str | Path) -> list[RemoteInfo]:
         result = self._run_checked(["remote", "-v"], cwd, timeout=30)

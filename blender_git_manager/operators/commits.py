@@ -4,6 +4,7 @@ import bpy
 from bpy.props import BoolProperty
 
 from ..preferences import get_addon_preferences
+from ..services.git_service import GitCommandError
 from ..state_sync import append_output, build_services, refresh_repository_state
 from .base import AsyncModalMixin
 
@@ -50,7 +51,14 @@ class GITMANAGER_OT_commit(AsyncModalMixin, bpy.types.Operator):
         def worker():
             commit_result = git.commit(repository_path, message, description)
             if push_after:
-                git.push_current(repository_path, remote)
+                try:
+                    git.push_current(repository_path, remote)
+                except Exception as exc:
+                    raise GitCommandError(
+                        f"Commit '{message}' was created locally, but push failed: {exc}",
+                        getattr(exc, "stderr", ""),
+                        getattr(exc, "attempts", ()),
+                    ) from exc
             return commit_result
 
         return self.start_async(

@@ -8,7 +8,7 @@ from bpy.props import BoolProperty, EnumProperty, StringProperty
 from ..models import InitConfig, InitReport
 from ..preferences import get_addon_preferences
 from ..state_sync import append_output, build_services, refresh_repository_state
-from ..utils.validation import ValidationError, validate_repository_name
+from ..utils.validation import ValidationError, validate_remote_url, validate_repository_name
 from .base import AsyncModalMixin
 
 
@@ -247,9 +247,10 @@ class GITMANAGER_OT_clone_repository(AsyncModalMixin, bpy.types.Operator):
         layout.prop(self, "open_blend_after_clone")
 
     def execute(self, context):
-        repository_value = self.repository.strip()
-        if not repository_value:
-            self.report({"ERROR"}, "Repository URL or owner/repository is required.")
+        try:
+            repository_value = validate_remote_url(self.repository)
+        except ValidationError as exc:
+            self.report({"ERROR"}, str(exc))
             return {"CANCELLED"}
         destination = Path(self.destination).expanduser().resolve(strict=False)
         _git, _lfs, _github, repository_service = build_services(context)
@@ -272,7 +273,7 @@ class GITMANAGER_OT_clone_repository(AsyncModalMixin, bpy.types.Operator):
         self.report({"INFO"}, "Repository cloned successfully.")
 
 
-class GITMANAGER_OT_connect_remote(bpy.types.Operator):
+class GITMANAGER_OT_connect_remote(AsyncModalMixin, bpy.types.Operator):
     bl_idname = "git_manager.connect_remote"
     bl_label = "Connect Existing Remote"
 
@@ -290,20 +291,41 @@ class GITMANAGER_OT_connect_remote(bpy.types.Operator):
             self.report({"ERROR"}, "Open a repository first.")
             return {"CANCELLED"}
         git, _lfs, _github, _repository = build_services(context)
-        try:
-            names = {remote.name for remote in git.remotes(state.repository_path)}
-            if self.remote_name in names:
-                git.set_remote_url(state.repository_path, self.remote_name, self.remote_url)
-            else:
-                git.add_remote(state.repository_path, self.remote_name, self.remote_url)
-            if self.push_after_connect:
-                git.push(state.repository_path, self.remote_name, state.active_branch, set_upstream=True)
-        except Exception as exc:
-            self.report({"ERROR"}, str(exc))
-            append_output(context, str(exc), "ERROR")
+        repository_path = str(state.repository_path)
+        remote_name = self.remote_name.strip()
+        push_after_connect = bool(self.push_after_connect)
+        if not remote_name:
+            self.report({"ERROR"}, "Remote name is required.")
             return {"CANCELLED"}
-        refresh_repository_state(context)
-        return {"FINISHED"}
+        try:
+            remote_url = validate_remote_url(self.remote_url)
+        except ValidationError as exc:
+            self.report({"ERROR"}, str(exc))
+            return {"CANCELLED"}
+
+        def worker():
+            names = {remote.name for remote in git.remotes(repository_path)}
+            if remote_name in names:
+                result = git.set_remote_url(repository_path, remote_name, remote_url)
+            else:
+                result = git.add_remote(repository_path, remote_name, remote_url)
+            if push_after_connect:
+                branch = git.active_branch(repository_path)
+                if not branch:
+                    raise RuntimeError("Pushing requires an active branch and cannot run in detached HEAD.")
+                return git.push(repository_path, remote_name, branch, set_upstream=True)
+            return result
+
+        return self.start_async(
+            context,
+            "Connect remote and push" if push_after_connect else "Connect remote",
+            worker,
+            process=git.process,
+        )
+
+    def on_async_success(self, context, result):
+        append_output(context, result.stdout or result.stderr or "Remote connected.", "SUCCESS")
+        refresh_repository_state(context, include_dependencies=False)
 
 class GITMANAGER_OT_create_initial_commit(AsyncModalMixin, bpy.types.Operator):
     bl_idname = "git_manager.create_initial_commit"

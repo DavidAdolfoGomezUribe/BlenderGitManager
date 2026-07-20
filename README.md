@@ -31,6 +31,7 @@ Esta entrega implementa una base ejecutable del **MVP** descrito en el documento
 - Commit y Commit + Push.
 - Quick Save desde el menú superior: prepara todos los cambios, crea `Quick Save N` y publica la rama activa.
 - Fetch, Pull `--ff-only`, Push y Sync.
+- Recuperación limitada de pushes LFS ante locks no disponibles y errores transitorios HTTP 5xx.
 - Detección de upstream, commits ahead y behind.
 - Historial estructurado de hasta 100 commits.
 - Detalles básicos del commit seleccionado.
@@ -53,7 +54,7 @@ El complemento continúa ofreciendo Git local cuando GitHub CLI no está instala
 
 ## Instalación rápida
 
-1. Descarga `blender_git_manager-0.1.3.zip`.
+1. Descarga `blender_git_manager-0.1.4.zip`.
 2. En Blender abre **Edit > Preferences > Add-ons** o **Extensions**.
 3. Selecciona **Install from Disk**.
 4. Elige el ZIP sin descomprimirlo.
@@ -104,6 +105,7 @@ blender_git_manager/
 │   ├── lfs_service.py           Fachada de Git LFS
 │   ├── github_service.py        Fachada de GitHub CLI
 │   ├── repository_service.py    Flujos de negocio compuestos
+│   ├── lfs_push_failures.py     Clasificación segura y recuperación de errores LFS
 │   ├── history_parser.py        Parser del historial con separadores seguros
 │   ├── status_parser.py         Parser de git status porcelain
 │   ├── background_task_service.py Cola reutilizable de tareas
@@ -157,6 +159,7 @@ git fetch origin --prune
 git pull --ff-only
 git push origin
 git push [-u] <remoto> <rama>:refs/heads/<rama-remota>
+git -c lfs.<url>.locksverify=false push ...
 git log --all --pretty=format:<formato estructurado>
 git for-each-ref ...
 git lfs install --local

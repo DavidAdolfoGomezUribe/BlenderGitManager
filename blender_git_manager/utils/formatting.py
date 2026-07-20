@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import re
 from collections.abc import Sequence
+from urllib.parse import urlsplit, urlunsplit
 
 from ..constants import SENSITIVE_ARGUMENT_MARKERS
 
@@ -31,6 +32,28 @@ def format_bytes(size: int) -> str:
 
 def strip_ansi(value: str) -> str:
     return _ANSI_ESCAPE_RE.sub("", str(value))
+
+
+def strip_url_credentials(value: str) -> str:
+    """Remove passwords/userinfo before a remote URL is persisted in Blender state."""
+    text = strip_ansi(str(value))
+    try:
+        parsed = urlsplit(text)
+    except ValueError:
+        return _URL_CREDENTIALS_RE.sub(r"\1", text)
+
+    if "@" not in parsed.netloc:
+        return text
+
+    raw_userinfo, host = parsed.netloc.rsplit("@", 1)
+    if parsed.scheme.lower() in {"http", "https"}:
+        safe_netloc = host
+    elif parsed.password is not None:
+        raw_username = raw_userinfo.split(":", 1)[0]
+        safe_netloc = f"{raw_username}@{host}" if raw_username else host
+    else:
+        return text
+    return urlunsplit((parsed.scheme, safe_netloc, parsed.path, parsed.query, parsed.fragment))
 
 
 def redact_text(value: str) -> str:

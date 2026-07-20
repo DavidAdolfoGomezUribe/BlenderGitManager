@@ -29,18 +29,17 @@ class GITMANAGER_OT_synchronize(AsyncModalMixin, bpy.types.Operator):
             return {"CANCELLED"}
         git, _lfs, _github, _repository = build_services(context)
         remote = get_addon_preferences(context).default_remote
+        operation = str(self.operation)
+        repository_path = str(state.repository_path)
 
         def worker():
-            if self.operation == "FETCH":
-                return git.fetch(state.repository_path, remote)
-            if self.operation == "PULL":
-                return git.pull(state.repository_path)
-            if self.operation == "PUSH":
-                try:
-                    return git.push(state.repository_path, remote)
-                except Exception:
-                    return git.push(state.repository_path, remote, state.active_branch, set_upstream=True)
-            return git.sync(state.repository_path, remote)
+            if operation == "FETCH":
+                return git.fetch(repository_path, remote)
+            if operation == "PULL":
+                return git.pull(repository_path)
+            if operation == "PUSH":
+                return git.push_current(repository_path, remote)
+            return git.sync(repository_path, remote)
 
         return self.start_async(context, self.operation.title(), worker, process=git.process)
 

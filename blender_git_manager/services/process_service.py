@@ -58,6 +58,14 @@ class ProcessService:
         with self._callback_lock:
             self._transient_output_callback = callback
 
+    def emit_status(self, level: str, message: str) -> None:
+        """Publish a sanitized service status through the normal console/output channel."""
+        self._emit(level, message)
+
+    def wait_for_retry(self, delay_seconds: float) -> bool:
+        """Wait without blocking cancellation; return false when cancellation was requested."""
+        return not self._cancel_requested.wait(max(0.0, float(delay_seconds)))
+
     def reset_cancellation(self) -> None:
         self._cancel_requested.clear()
 

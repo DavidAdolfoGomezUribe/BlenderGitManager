@@ -8,7 +8,7 @@ import bpy
 from .constants import MAX_OUTPUT_LINES
 from .preferences import get_addon_preferences
 from .services import GitHubService, GitService, LFSService, RepositoryService
-from .utils.formatting import format_bytes, redact_text
+from .utils.formatting import format_bytes, redact_text, strip_url_credentials
 
 
 def append_output(
@@ -129,7 +129,11 @@ def refresh_repository_state(context: bpy.types.Context, include_dependencies: b
     state.behind = snapshot.sync.behind
     state.sync_label = snapshot.sync.label
     state.lfs_active = snapshot.lfs_active
-    state.remote_url = snapshot.remotes[0].fetch_url if snapshot.remotes else ""
+    state.remote_url = (
+        redact_text(strip_url_credentials(snapshot.remotes[0].fetch_url))
+        if snapshot.remotes
+        else ""
+    )
 
     if snapshot.last_commit:
         state.last_commit_hash = snapshot.last_commit.short_hash
