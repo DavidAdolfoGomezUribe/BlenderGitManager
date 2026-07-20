@@ -36,7 +36,7 @@ Esta entrega implementa una base ejecutable del **MVP** descrito en el documento
 - Historial estructurado de hasta 100 commits.
 - Detalles básicos del commit seleccionado.
 - Lista de ramas locales y remotas.
-- Creación y cambio de rama con respaldo previo del `.blend`.
+- Creación y cambio de rama con respaldo previo y recarga automática del `.blend` de la rama destino.
 - Gestión inicial de patrones Git LFS.
 - Panel de salida amigable y sin secretos.
 - Operaciones de red mediante operadores modales para evitar congelar la interfaz.
@@ -54,7 +54,7 @@ El complemento continúa ofreciendo Git local cuando GitHub CLI no está instala
 
 ## Instalación rápida
 
-1. Descarga `blender_git_manager-0.1.4.zip`.
+1. Descarga `blender_git_manager-0.1.5.zip`.
 2. En Blender abre **Edit > Preferences > Add-ons** o **Extensions**.
 3. Selecciona **Install from Disk**.
 4. Elige el ZIP sin descomprimirlo.

@@ -4,6 +4,7 @@ import bpy
 from bpy.props import BoolProperty, StringProperty
 
 from ..state_sync import append_output, build_services, refresh_repository_state
+from .base import reject_if_task_running
 
 
 def _selected_paths(state, staged: bool | None = None) -> list[str]:
@@ -25,6 +26,8 @@ class GITMANAGER_OT_stage(bpy.types.Operator):
     stage_all: BoolProperty(default=False)
 
     def execute(self, context):
+        if reject_if_task_running(self, context):
+            return {"CANCELLED"}
         state = context.scene.git_manager
         git, _lfs, _github, _repository = build_services(context)
         try:
@@ -50,6 +53,8 @@ class GITMANAGER_OT_unstage(bpy.types.Operator):
     unstage_all: BoolProperty(default=False)
 
     def execute(self, context):
+        if reject_if_task_running(self, context):
+            return {"CANCELLED"}
         state = context.scene.git_manager
         git, _lfs, _github, _repository = build_services(context)
         try:
@@ -81,6 +86,8 @@ class GITMANAGER_OT_discard_changes(bpy.types.Operator):
         self.layout.prop(self, "confirm")
 
     def execute(self, context):
+        if reject_if_task_running(self, context):
+            return {"CANCELLED"}
         if not self.confirm:
             return {"CANCELLED"}
         state = context.scene.git_manager

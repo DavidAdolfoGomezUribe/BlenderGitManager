@@ -392,6 +392,107 @@ class GitService:
         arguments = ["switch", "-c", branch] if switch else ["branch", branch]
         return self._run_checked(arguments, cwd, timeout=60)
 
+    def branch_contains_regular_file(
+        self,
+        cwd: str | Path,
+        branch_name: str,
+        path: str | Path,
+    ) -> bool:
+        branch = validate_branch_name(branch_name)
+        root = Path(cwd).expanduser().resolve(strict=False)
+        candidate = Path(path)
+        absolute = candidate if candidate.is_absolute() else root / candidate
+        try:
+            relative = absolute.expanduser().resolve(strict=False).relative_to(root).as_posix()
+        except ValueError as exc:
+            raise GitCommandError("The Blender file must be inside the active repository.") from exc
+        if not relative or relative == ".":
+            raise GitCommandError("A repository-relative file path is required.")
+
+        result = self._run_checked(
+            [
+                "--literal-pathspecs",
+                "ls-tree",
+                "-r",
+                "-z",
+                f"refs/heads/{branch}",
+                "--",
+                relative,
+            ],
+            root,
+            timeout=30,
+        )
+        for record in result.stdout.split("\x00"):
+            if not record or "\t" not in record:
+                continue
+            metadata, entry_path = record.split("\t", 1)
+            fields = metadata.split()
+            if (
+                entry_path == relative
+                and len(fields) >= 2
+                and fields[0] in {"100644", "100755"}
+                and fields[1] == "blob"
+            ):
+                return True
+        return False
+
+    def path_has_changes(self, cwd: str | Path, path: str | Path) -> bool:
+        root = Path(cwd).expanduser().resolve(strict=False)
+        candidate = Path(path)
+        absolute = candidate if candidate.is_absolute() else root / candidate
+        try:
+            relative = absolute.expanduser().resolve(strict=False).relative_to(root).as_posix()
+        except ValueError as exc:
+            raise GitCommandError("The Blender file must be inside the active repository.") from exc
+        if not relative or relative == ".":
+            raise GitCommandError("A repository-relative file path is required.")
+
+        result = self._run_checked(
+            [
+                "--literal-pathspecs",
+                "status",
+                "--porcelain=v1",
+                "-z",
+                "--untracked-files=all",
+                "--",
+                relative,
+            ],
+            root,
+            timeout=30,
+        )
+        return bool(result.stdout)
+
+    def restore_path_from_branch(
+        self,
+        cwd: str | Path,
+        branch_name: str,
+        path: str | Path,
+    ):
+        branch = validate_branch_name(branch_name)
+        root = Path(cwd).expanduser().resolve(strict=False)
+        candidate = Path(path)
+        absolute = candidate if candidate.is_absolute() else root / candidate
+        try:
+            relative = absolute.expanduser().resolve(strict=False).relative_to(root).as_posix()
+        except ValueError as exc:
+            raise GitCommandError("The Blender file must be inside the active repository.") from exc
+        if not relative or relative == ".":
+            raise GitCommandError("A repository-relative file path is required.")
+        return self._run_checked(
+            [
+                "--literal-pathspecs",
+                "restore",
+                "--source",
+                f"refs/heads/{branch}",
+                "--staged",
+                "--worktree",
+                "--",
+                relative,
+            ],
+            root,
+            timeout=300,
+        )
+
     def switch_branch(self, cwd: str | Path, name: str):
         branch = validate_branch_name(name)
         return self._run_checked(["switch", branch], cwd, timeout=300)

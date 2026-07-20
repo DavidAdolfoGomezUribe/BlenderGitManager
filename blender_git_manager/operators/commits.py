@@ -6,7 +6,7 @@ from bpy.props import BoolProperty
 from ..preferences import get_addon_preferences
 from ..services.git_service import GitCommandError
 from ..state_sync import append_output, build_services, refresh_repository_state
-from .base import AsyncModalMixin
+from .base import AsyncModalMixin, reject_if_task_running
 
 
 class GITMANAGER_OT_commit(AsyncModalMixin, bpy.types.Operator):
@@ -17,6 +17,8 @@ class GITMANAGER_OT_commit(AsyncModalMixin, bpy.types.Operator):
 
     def execute(self, context):
         state = context.scene.git_manager
+        if reject_if_task_running(self, context):
+            return {"CANCELLED"}
         if not state.repository_path:
             self.report({"ERROR"}, "Open or initialize a repository first.")
             return {"CANCELLED"}
@@ -98,8 +100,7 @@ class GITMANAGER_OT_quick_save(AsyncModalMixin, bpy.types.Operator):
 
     def execute(self, context):
         state = context.scene.git_manager
-        if state.task_running:
-            self.report({"WARNING"}, f"Another Git task is already running: {state.task_label}")
+        if reject_if_task_running(self, context):
             return {"CANCELLED"}
 
         preferences = get_addon_preferences(context)

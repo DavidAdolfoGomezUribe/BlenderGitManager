@@ -14,6 +14,15 @@ from ..utils.formatting import redact_text
 _EXECUTOR = ThreadPoolExecutor(max_workers=2, thread_name_prefix="blender-git-manager")
 
 
+def reject_if_task_running(operator, context: bpy.types.Context) -> bool:
+    """Report the active task and prevent a second Git mutation from starting."""
+    state = context.scene.git_manager
+    if not state.task_running:
+        return False
+    operator.report({"WARNING"}, f"Another Git task is already running: {state.task_label}")
+    return True
+
+
 class AsyncModalMixin:
     _future: Future | None = None
     _timer = None
@@ -32,8 +41,7 @@ class AsyncModalMixin:
         capture_transient_output: bool = False,
     ):
         state = context.scene.git_manager
-        if state.task_running:
-            self.report({"WARNING"}, f"Another Git task is already running: {state.task_label}")
+        if reject_if_task_running(self, context):
             return {"CANCELLED"}
 
         self._task_label = label

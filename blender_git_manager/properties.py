@@ -87,8 +87,8 @@ class GitManagerState(bpy.types.PropertyGroup):
     github_user: StringProperty()
 
     blend_unsaved: BoolProperty(default=False)
-    task_running: BoolProperty(default=False)
-    task_label: StringProperty()
+    task_running: BoolProperty(default=False, options={"SKIP_SAVE"})
+    task_label: StringProperty(options={"SKIP_SAVE"})
     status_message: StringProperty()
 
     commit_message: StringProperty(name="Commit message")

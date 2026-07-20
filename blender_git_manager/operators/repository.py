@@ -9,7 +9,7 @@ from ..models import InitConfig, InitReport
 from ..preferences import get_addon_preferences
 from ..state_sync import append_output, build_services, refresh_repository_state
 from ..utils.validation import ValidationError, validate_remote_url, validate_repository_name
-from .base import AsyncModalMixin
+from .base import AsyncModalMixin, reject_if_task_running
 
 
 class GITMANAGER_OT_open_manager(bpy.types.Operator):
@@ -169,6 +169,8 @@ class GITMANAGER_OT_initialize_repository(AsyncModalMixin, bpy.types.Operator):
         bpy.ops.wm.save_as_mainfile(filepath=str(root / target_name), copy=False)
 
     def execute(self, context):
+        if reject_if_task_running(self, context):
+            return {"CANCELLED"}
         try:
             self._save_blend()
         except Exception as exc:

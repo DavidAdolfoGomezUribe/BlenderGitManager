@@ -57,11 +57,13 @@ def unregister() -> None:
     global _registered
     _require_blender()
     from .operators import CLASSES as OPERATOR_CLASSES
+    from .operators.branches import cancel_pending_blend_reload
     from .preferences import BlenderGitManagerPreferences
     from .properties import unregister_properties
     from .ui import unregister_ui
 
     _registered = False
+    cancel_pending_blend_reload()
     if bpy.app.timers.is_registered(_auto_refresh_timer):
         bpy.app.timers.unregister(_auto_refresh_timer)
     unregister_ui()

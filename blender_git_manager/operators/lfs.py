@@ -4,6 +4,7 @@ import bpy
 from bpy.props import StringProperty
 
 from ..state_sync import append_output, build_services, refresh_repository_state
+from .base import reject_if_task_running
 
 
 class GITMANAGER_OT_lfs_track(bpy.types.Operator):
@@ -16,6 +17,8 @@ class GITMANAGER_OT_lfs_track(bpy.types.Operator):
         return context.window_manager.invoke_props_dialog(self, width=420)
 
     def execute(self, context):
+        if reject_if_task_running(self, context):
+            return {"CANCELLED"}
         state = context.scene.git_manager
         _git, lfs, _github, _repository = build_services(context)
         try:
@@ -40,6 +43,8 @@ class GITMANAGER_OT_lfs_untrack(bpy.types.Operator):
         return context.window_manager.invoke_props_dialog(self, width=420)
 
     def execute(self, context):
+        if reject_if_task_running(self, context):
+            return {"CANCELLED"}
         state = context.scene.git_manager
         _git, lfs, _github, _repository = build_services(context)
         try:

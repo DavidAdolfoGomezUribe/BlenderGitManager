@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 ADDON_NAME = "Blender Git Manager"
-ADDON_VERSION = (0, 1, 4)
+ADDON_VERSION = (0, 1, 5)
 DEFAULT_BRANCH = "main"
 DEFAULT_REMOTE = "origin"
 MAX_HISTORY_COMMITS = 100
