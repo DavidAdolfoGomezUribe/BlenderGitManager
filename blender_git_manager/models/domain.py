@@ -101,6 +101,7 @@ class BranchInfo:
     subject: str = ""
     author: str = ""
     authored_at: str = ""
+    full_ref: str = ""
 
 
 @dataclass(slots=True)
@@ -146,6 +147,7 @@ class RepositorySnapshot:
     sync: SyncStatus = field(default_factory=SyncStatus)
     lfs_active: bool = False
     last_commit: CommitInfo | None = None
+    reference_signature: str = ""
 
 
 StepState = Literal["pending", "running", "completed", "failed", "skipped"]

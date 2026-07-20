@@ -75,10 +75,7 @@ class ProcessService:
         with self._process_lock:
             process = self._active_process
         if process is not None and process.poll() is None:
-            try:
-                process.terminate()
-            except OSError:
-                pass
+            self._stop_process(process)
 
     def _emit(self, level: str, message: str) -> None:
         safe_message = redact_text(message).strip()
@@ -134,9 +131,106 @@ class ProcessService:
                 pass
 
     @staticmethod
+    def _terminate_windows_descendants(root_pid: int) -> None:
+        """Terminate descendants from a Toolhelp snapshot without invoking a shell."""
+        if os.name != "nt":
+            return
+        try:
+            import ctypes
+            from ctypes import wintypes
+
+            class ProcessEntry32W(ctypes.Structure):
+                _fields_ = (
+                    ("dwSize", wintypes.DWORD),
+                    ("cntUsage", wintypes.DWORD),
+                    ("th32ProcessID", wintypes.DWORD),
+                    ("th32DefaultHeapID", ctypes.c_size_t),
+                    ("th32ModuleID", wintypes.DWORD),
+                    ("cntThreads", wintypes.DWORD),
+                    ("th32ParentProcessID", wintypes.DWORD),
+                    ("pcPriClassBase", wintypes.LONG),
+                    ("dwFlags", wintypes.DWORD),
+                    ("szExeFile", wintypes.WCHAR * 260),
+                )
+
+            kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+            create_snapshot = kernel32.CreateToolhelp32Snapshot
+            create_snapshot.argtypes = (wintypes.DWORD, wintypes.DWORD)
+            create_snapshot.restype = wintypes.HANDLE
+            process_first = kernel32.Process32FirstW
+            process_first.argtypes = (
+                wintypes.HANDLE,
+                ctypes.POINTER(ProcessEntry32W),
+            )
+            process_first.restype = wintypes.BOOL
+            process_next = kernel32.Process32NextW
+            process_next.argtypes = (
+                wintypes.HANDLE,
+                ctypes.POINTER(ProcessEntry32W),
+            )
+            process_next.restype = wintypes.BOOL
+            open_process = kernel32.OpenProcess
+            open_process.argtypes = (
+                wintypes.DWORD,
+                wintypes.BOOL,
+                wintypes.DWORD,
+            )
+            open_process.restype = wintypes.HANDLE
+            terminate_process = kernel32.TerminateProcess
+            terminate_process.argtypes = (wintypes.HANDLE, wintypes.UINT)
+            terminate_process.restype = wintypes.BOOL
+            wait_for_single = kernel32.WaitForSingleObject
+            wait_for_single.argtypes = (wintypes.HANDLE, wintypes.DWORD)
+            wait_for_single.restype = wintypes.DWORD
+            close_handle = kernel32.CloseHandle
+            close_handle.argtypes = (wintypes.HANDLE,)
+            close_handle.restype = wintypes.BOOL
+
+            snapshot = create_snapshot(0x00000002, 0)
+            invalid_handle = ctypes.c_void_p(-1).value
+            if not snapshot or snapshot == invalid_handle:
+                return
+            children: dict[int, list[int]] = {}
+            try:
+                entry = ProcessEntry32W()
+                entry.dwSize = ctypes.sizeof(ProcessEntry32W)
+                has_entry = bool(process_first(snapshot, ctypes.byref(entry)))
+                while has_entry:
+                    parent = int(entry.th32ParentProcessID)
+                    children.setdefault(parent, []).append(
+                        int(entry.th32ProcessID)
+                    )
+                    has_entry = bool(process_next(snapshot, ctypes.byref(entry)))
+            finally:
+                close_handle(snapshot)
+
+            descendants: list[int] = []
+            pending = list(children.get(int(root_pid), ()))
+            while pending:
+                process_id = pending.pop()
+                descendants.append(process_id)
+                pending.extend(children.get(process_id, ()))
+
+            process_access = 0x0001 | 0x00100000
+            for process_id in reversed(descendants):
+                handle = open_process(process_access, False, process_id)
+                if not handle:
+                    continue
+                try:
+                    terminate_process(handle, 130)
+                    wait_for_single(handle, 1000)
+                finally:
+                    close_handle(handle)
+        except (AttributeError, OSError, TypeError, ValueError):
+            # The normal parent-process termination below remains available.
+            return
+
+    @staticmethod
     def _stop_process(process: subprocess.Popen[str]) -> None:
         if process.poll() is not None:
             return
+        if os.name == "nt":
+            ProcessService._terminate_windows_descendants(process.pid)
         try:
             process.terminate()
             process.wait(timeout=2)

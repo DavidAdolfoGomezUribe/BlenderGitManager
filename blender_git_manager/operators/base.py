@@ -31,6 +31,7 @@ class AsyncModalMixin:
     _transient_process_output: SimpleQueue[tuple[str, str]] | None = None
     _cancel_requested = False
     _task_label = ""
+    _cancel_supported = True
 
     def start_async(
         self,
@@ -96,6 +97,16 @@ class AsyncModalMixin:
 
     def modal(self, context: bpy.types.Context, event: bpy.types.Event):
         if event.type == "ESC":
+            if self._future is not None and self._future.done():
+                # Let the next TIMER apply the completed result. Treating this
+                # narrow window as cancellation would skip on_async_success().
+                return {"RUNNING_MODAL"}
+            if not self._cancel_supported:
+                self.report(
+                    {"WARNING"},
+                    f"{self._task_label} cannot be cancelled safely once started.",
+                )
+                return {"RUNNING_MODAL"}
             if not self._cancel_requested:
                 self._cancel_requested = True
                 context.scene.git_manager.task_label = f"Cancelling {self._task_label}"

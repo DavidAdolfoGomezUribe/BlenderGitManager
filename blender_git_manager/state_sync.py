@@ -6,8 +6,11 @@ from pathlib import Path
 import bpy
 
 from .constants import MAX_OUTPUT_LINES
+from .models import CommitReferenceKind
 from .preferences import get_addon_preferences
 from .services import GitHubService, GitService, LFSService, RepositoryService
+from .services.graph_layout_service import GraphLayoutService
+from .services.history_service import parse_commit_references
 from .utils.formatting import format_bytes, redact_text, strip_url_credentials
 
 
@@ -93,8 +96,13 @@ def resolve_repository_root(context: bpy.types.Context) -> Path | None:
     return None
 
 
-def refresh_repository_state(context: bpy.types.Context, include_dependencies: bool = True) -> bool:
+def refresh_repository_state(
+    context: bpy.types.Context,
+    include_dependencies: bool = True,
+    include_history: bool = False,
+) -> bool:
     state = context.scene.git_manager
+    previous_repository_path = str(state.repository_path)
     state.blend_unsaved = bool(bpy.data.is_dirty or not bpy.data.filepath)
     if include_dependencies:
         refresh_dependencies(context)
@@ -108,14 +116,22 @@ def refresh_repository_state(context: bpy.types.Context, include_dependencies: b
         state.active_branch = ""
         state.remote_url = ""
         state.changes.clear()
-        state.commits.clear()
         state.branches.clear()
+        try:
+            from .operators.history_runtime import clear_repository_history
+
+            clear_repository_history(context)
+        except (AttributeError, ImportError, RuntimeError):
+            state.commits.clear()
         state.status_message = "No Git repository detected."
         return False
 
     _git, lfs, _github, repository = build_services(context)
     try:
-        snapshot = repository.snapshot(root, history_limit=100)
+        snapshot = repository.snapshot(
+            root,
+            history_limit=100 if include_history else 0,
+        )
     except Exception as exc:
         state.status_message = str(exc)
         append_output(context, str(exc), "ERROR")
@@ -160,25 +176,70 @@ def refresh_repository_state(context: bpy.types.Context, include_dependencies: b
         item.conflicted = change.conflicted
         item.untracked = change.untracked
 
-    state.commits.clear()
-    for commit in snapshot.commits:
-        item = state.commits.add()
-        item.full_hash = commit.full_hash
-        item.short_hash = commit.short_hash
-        item.subject = commit.subject
-        item.body = commit.body
-        item.author_name = commit.author_name
-        item.author_email = commit.author_email
-        item.authored_at = commit.authored_at
-        item.decorations = commit.decorations
-        item.parent_hashes = " ".join(commit.parent_hashes)
-        item.is_merge = commit.is_merge
-        item.is_head = bool(snapshot.head_commit and commit.full_hash == snapshot.head_commit)
+    if include_history:
+        graph_rows = GraphLayoutService().layout(snapshot.commits)
+        state.commits.clear()
+        state.history_graph_lane_count = 1
+        for commit, graph_row in zip(snapshot.commits, graph_rows, strict=True):
+            references = parse_commit_references(commit.decorations)
+            item = state.commits.add()
+            item.full_hash = commit.full_hash
+            item.short_hash = commit.short_hash
+            item.subject = commit.subject
+            item.body = commit.body
+            item.author_name = commit.author_name
+            item.author_email = commit.author_email
+            item.authored_at = commit.authored_at
+            item.display_date = commit.authored_at.replace("T", " ")[:16]
+            item.decorations = commit.decorations
+            item.parent_hashes = " ".join(commit.parent_hashes)
+            item.is_merge = commit.is_merge
+            item.is_head = bool(
+                snapshot.head_commit and commit.full_hash == snapshot.head_commit
+            )
+            item.lane_index = graph_row.lane_index
+            item.parent_lane_indexes = " ".join(
+                str(lane) for lane in graph_row.parent_lane_indexes
+            )
+            item.active_lane_indexes = " ".join(
+                str(lane)
+                for lane, value in enumerate(graph_row.lanes_before)
+                if value is not None
+            )
+            item.outgoing_lane_indexes = " ".join(
+                str(lane)
+                for lane, value in enumerate(graph_row.lanes_after)
+                if value is not None
+            )
+            item.graph_lane_count = max(1, graph_row.lane_count)
+            item.local_branches = "\n".join(
+                reference.name
+                for reference in references
+                if reference.kind is CommitReferenceKind.LOCAL_BRANCH
+            )
+            item.remote_branches = "\n".join(
+                reference.name
+                for reference in references
+                if reference.kind is CommitReferenceKind.REMOTE_BRANCH
+            )
+            item.tags = "\n".join(
+                reference.name
+                for reference in references
+                if reference.kind is CommitReferenceKind.TAG
+            )
+            state.history_graph_lane_count = max(
+                state.history_graph_lane_count,
+                item.graph_lane_count,
+            )
+        state.history_loaded = True
+        state.history_loaded_count = len(snapshot.commits)
+        state.history_visible_count = len(snapshot.commits)
 
     state.branches.clear()
     for branch in snapshot.branches:
         item = state.branches.add()
         item.name = branch.name
+        item.full_ref = branch.full_ref
         item.current = branch.current
         item.remote = branch.remote
         item.upstream = branch.upstream
@@ -186,6 +247,37 @@ def refresh_repository_state(context: bpy.types.Context, include_dependencies: b
         item.subject = branch.subject
         item.author = branch.author
         item.authored_at = branch.authored_at
+
+    repository_changed = bool(
+        not previous_repository_path
+        or Path(previous_repository_path).expanduser().resolve(strict=False)
+        != snapshot.root
+    )
+    if repository_changed and not include_history:
+        try:
+            from .operators.history_runtime import clear_repository_history
+
+            clear_repository_history(context)
+        except (AttributeError, ImportError, RuntimeError):
+            state.commits.clear()
+
+    signature_parts = [
+        str(snapshot.root),
+        snapshot.head_commit,
+        snapshot.active_branch,
+        snapshot.reference_signature,
+        *(
+            f"{branch.name}:{branch.short_hash}:{int(branch.remote)}"
+            for branch in snapshot.branches
+        ),
+    ]
+    signature = "\x1f".join(signature_parts)
+    try:
+        from .operators.history_runtime import repository_summary_changed
+
+        repository_summary_changed(context, signature)
+    except (AttributeError, ImportError, ReferenceError, RuntimeError):
+        state.history_repository_signature = signature
 
     state.status_message = f"{len(state.changes)} changed file(s)"
     return True

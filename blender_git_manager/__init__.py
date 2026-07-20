@@ -59,7 +59,8 @@ def unregister() -> None:
     from .operators import CLASSES as OPERATOR_CLASSES
     from .operators.branches import cancel_pending_blend_reload
     from .operators.history import cancel_pending_commit_reload
-    from .operators.history_interaction import cancel_history_interaction
+    from .operators.history_actions import cancel_history_action_callbacks
+    from .operators.history_runtime import cancel_history_runtime
     from .preferences import BlenderGitManagerPreferences
     from .properties import unregister_properties
     from .ui import unregister_ui
@@ -67,7 +68,8 @@ def unregister() -> None:
     _registered = False
     cancel_pending_blend_reload()
     cancel_pending_commit_reload()
-    cancel_history_interaction()
+    cancel_history_action_callbacks()
+    cancel_history_runtime()
     if bpy.app.timers.is_registered(_auto_refresh_timer):
         bpy.app.timers.unregister(_auto_refresh_timer)
     unregister_ui()

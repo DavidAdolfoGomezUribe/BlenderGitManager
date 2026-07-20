@@ -2,13 +2,20 @@ from __future__ import annotations
 
 import bpy
 
-from .lists import GITMANAGER_UL_branches, GITMANAGER_UL_changes, GITMANAGER_UL_commits, GITMANAGER_UL_output
+from .lists import (
+    GITMANAGER_UL_branches,
+    GITMANAGER_UL_changes,
+    GITMANAGER_UL_commit_files,
+    GITMANAGER_UL_commits,
+    GITMANAGER_UL_output,
+)
 from .main_panel import GITMANAGER_PT_main
 from .top_menu import GITMANAGER_MT_git, draw_git_menu
 
 CLASSES = (
     GITMANAGER_UL_changes,
     GITMANAGER_UL_commits,
+    GITMANAGER_UL_commit_files,
     GITMANAGER_UL_branches,
     GITMANAGER_UL_output,
     GITMANAGER_MT_git,

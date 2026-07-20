@@ -124,7 +124,11 @@ try:
 
         require(commit_c1 != commit_c2, "The C1 and C2 fixtures resolved to the same commit.")
         require(not git.repository_has_changes(repository), "The initial repository is not clean.")
-        refresh_repository_state(bpy.context, include_dependencies=True)
+        refresh_repository_state(
+            bpy.context,
+            include_dependencies=True,
+            include_history=True,
+        )
         get_addon_preferences(bpy.context).create_backup_before_checkout = False
 
         # Attached main/C2 -> detached C1. This must materialize the whole tree and scene.
@@ -202,7 +206,11 @@ try:
         git.commit(repository, "Commit without scene")
         missing_commit = git.head_commit(repository)
         git.switch_branch(repository, "main")
-        refresh_repository_state(bpy.context, include_dependencies=False)
+        refresh_repository_state(
+            bpy.context,
+            include_dependencies=False,
+            include_history=True,
+        )
 
         state = bpy.context.scene.git_manager
         missing_error = failure_text(
@@ -233,7 +241,11 @@ try:
         git.commit(repository, "Commit with corrupt scene")
         corrupt_commit = git.head_commit(repository)
         git.switch_branch(repository, "main")
-        refresh_repository_state(bpy.context, include_dependencies=False)
+        refresh_repository_state(
+            bpy.context,
+            include_dependencies=False,
+            include_history=True,
+        )
 
         state = bpy.context.scene.git_manager
         corrupt_error = failure_text(
@@ -310,7 +322,11 @@ try:
             git.switch_branch(repository, "main")
             lfs_object.unlink()
             require(not lfs_object.exists(), "The local LFS object fixture was not deleted.")
-            refresh_repository_state(bpy.context, include_dependencies=False)
+            refresh_repository_state(
+                bpy.context,
+                include_dependencies=False,
+                include_history=True,
+            )
 
             state = bpy.context.scene.git_manager
             lfs_error = failure_text(

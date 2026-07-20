@@ -115,33 +115,189 @@ def _draw_changes(layout, state):
     operator.push_after = True
 
 
-def _draw_history(layout, state):
-    layout.label(
-        text="Double-click a commit to load its files and reopen the current Blender scene.",
-        icon="INFO",
+def _draw_history_controls(layout, state):
+    controls = layout.box()
+    top = controls.row(align=True)
+    top.operator("git_manager.history_refresh", text="Refresh", icon="FILE_REFRESH")
+    top.prop(state, "history_search", text="", icon="VIEWZOOM")
+    top.operator("git_manager.history_load_more", text="Load More", icon="ADD")
+
+    filters = controls.grid_flow(columns=2, even_columns=True, even_rows=False, align=True)
+    filters.prop_search(
+        state,
+        "history_branch_filter",
+        state,
+        "branches",
+        "name",
+        text="Branch",
+        icon="OUTLINER_OB_ARMATURE",
     )
-    layout.template_list("GITMANAGER_UL_commits", "", state, "commits", state, "commits_index", rows=12)
+    filters.prop(state, "history_author_filter", text="Author", icon="USER")
+
+    toggles = controls.row(align=True)
+    toggles.prop(state, "history_show_all_branches", toggle=True)
+    toggles.prop(state, "history_show_remotes", toggle=True)
+    toggles.prop(state, "history_show_tags", toggle=True)
+    toggles.label(
+        text=(
+            f"{state.history_visible_count} visible / "
+            f"{state.history_loaded_count} loaded"
+        )
+    )
+
+
+def _draw_history_graph(layout, state, rows: int):
+    graph = layout.box()
+    title = graph.row(align=True)
+    title.label(text="Git Graph", icon="NODETREE")
+    if state.history_loading:
+        title.label(text="Loading in background…", icon="TIME")
+    elif state.history_error:
+        title.label(text="Could not load history", icon="ERROR")
+    elif state.history_dirty:
+        title.label(text="Update pending", icon="FILE_REFRESH")
+
+    header = graph.row(align=True)
+    header.label(text="Graph     Commit            Message                         Author          Date          References")
+
+    if state.history_error:
+        error = graph.box()
+        error.alert = True
+        error.label(text=state.history_error[:240], icon="ERROR")
+
+    if state.commits:
+        graph.template_list(
+            "GITMANAGER_UL_commits",
+            "",
+            state,
+            "commits",
+            state,
+            "commits_index",
+            rows=rows,
+        )
+    elif state.history_loading:
+        graph.label(text="Reading commits and calculating graph lanes…", icon="TIME")
+    elif state.history_loaded:
+        graph.label(text="No commits match the current history filters.", icon="INFO")
+    else:
+        graph.label(text="History has not been loaded yet.", icon="INFO")
+
     if 0 <= state.commits_index < len(state.commits):
         commit = state.commits[state.commits_index]
-        action = layout.row(align=True)
+        action = graph.row(align=True)
+        action.operator_context = "INVOKE_DEFAULT"
         operator = action.operator(
-            "git_manager.history_commit_click",
+            "git_manager.checkout_commit",
             text="Load Selected Commit",
             icon="FILE_REFRESH",
         )
         operator.commit_hash = commit.full_hash
         operator.commit_index = state.commits_index
-        operator.load_immediately = True
-        details = layout.box()
-        details.label(text=commit.subject, icon="INFO")
-        details.label(text=f"Hash: {commit.full_hash}")
-        details.label(text=f"Author: {commit.author_name} <{commit.author_email}>")
-        details.label(text=f"Date: {commit.authored_at}")
-        details.label(text=f"Parents: {commit.parent_hashes or '-'}")
-        details.label(text=f"Refs: {commit.decorations or '-'}")
-        if commit.body:
-            for line in commit.body.splitlines()[:8]:
-                details.label(text=line)
+
+    pagination = graph.row(align=True)
+    pagination.enabled = bool(state.history_has_more and not state.history_loading)
+    pagination.operator(
+        "git_manager.history_load_more",
+        text=f"Load {min(100, max(0, 1000 - state.history_limit))} More Commits",
+        icon="TRIA_DOWN",
+    )
+
+
+def _draw_history_details(layout, state):
+    details = layout.box()
+    details.label(text="Commit Details", icon="INFO")
+    if not (0 <= state.commits_index < len(state.commits)):
+        details.label(text="Select a commit to inspect it.")
+        return
+
+    commit = state.commits[state.commits_index]
+    details.label(text=commit.subject or "(No commit message)", icon="DECORATE_LINKED" if commit.is_merge else "DOT")
+    if commit.body:
+        for line in commit.body.splitlines()[:8]:
+            details.label(text=line[:160])
+
+    identity = details.column(align=True)
+    identity.label(text=f"Hash: {commit.full_hash}")
+    identity.label(text=f"Author: {commit.author_name} <{commit.author_email}>")
+    identity.label(text=f"Date: {commit.authored_at}")
+    identity.label(text=f"Parents: {commit.parent_hashes or 'Root commit'}")
+    if commit.local_branches:
+        identity.label(text=f"Branches: {', '.join(commit.local_branches.splitlines())}", icon="OUTLINER_OB_ARMATURE")
+    if commit.remote_branches:
+        identity.label(text=f"Remotes: {', '.join(commit.remote_branches.splitlines())}", icon="URL")
+    if commit.tags:
+        identity.label(text=f"Tags: {', '.join(commit.tags.splitlines())}", icon="BOOKMARKS")
+    if commit.is_head:
+        identity.label(text="HEAD / current repository position", icon="RADIOBUT_ON")
+
+    actions = details.grid_flow(columns=2, even_columns=True, even_rows=True, align=True)
+    copy = actions.operator("git_manager.copy_commit_hash", text="Copy Commit Hash", icon="COPYDOWN")
+    copy.commit_hash = commit.full_hash
+    branch = actions.operator(
+        "git_manager.create_branch_from_commit",
+        text="Create Branch from Commit",
+        icon="ADD",
+    )
+    branch.commit_hash = commit.full_hash
+    tag = actions.operator("git_manager.create_tag_from_commit", text="Create Tag", icon="BOOKMARKS")
+    tag.commit_hash = commit.full_hash
+    open_remote = actions.operator(
+        "git_manager.open_commit_remote",
+        text="Open Commit on GitHub",
+        icon="URL",
+    )
+    open_remote.commit_hash = commit.full_hash
+
+    destructive = details.row(align=True)
+    revert = destructive.operator(
+        "git_manager.revert_commit",
+        text="Revert Commit",
+        icon="LOOP_BACK",
+    )
+    revert.commit_hash = commit.full_hash
+
+    files = details.box()
+    if state.history_detail_loading and state.history_detail_hash == commit.full_hash:
+        files.label(text="Loading changed files and statistics…", icon="TIME")
+    elif state.history_detail_error and state.history_detail_hash == commit.full_hash:
+        files.alert = True
+        files.label(text=state.history_detail_error[:220], icon="ERROR")
+    elif state.history_detail_hash == commit.full_hash:
+        files.label(
+            text=(
+                f"{state.history_detail_file_count} file(s)   "
+                f"+{state.history_detail_additions}   "
+                f"-{state.history_detail_deletions}"
+            ),
+            icon="FILE",
+        )
+        if state.history_detail_files:
+            files.template_list(
+                "GITMANAGER_UL_commit_files",
+                "",
+                state,
+                "history_detail_files",
+                state,
+                "history_detail_files_index",
+                rows=7,
+            )
+        else:
+            files.label(text="This commit has no file changes to display.")
+    else:
+        files.label(text="Select a commit to load its changed files.", icon="INFO")
+
+
+def _draw_history(layout, state, expanded: bool):
+    _draw_history_controls(layout, state)
+    if expanded:
+        content = layout.split(factor=0.67)
+        graph_column = content.column()
+        details_column = content.column()
+        _draw_history_graph(graph_column, state, rows=16)
+        _draw_history_details(details_column, state)
+    else:
+        _draw_history_graph(layout, state, rows=10)
+        _draw_history_details(layout, state)
 
 
 def _draw_branches(layout, state):
@@ -200,7 +356,7 @@ def draw_dashboard(layout, context: bpy.types.Context, expanded: bool = False):
     if state.active_tab == "CHANGES":
         _draw_changes(layout, state)
     elif state.active_tab == "HISTORY":
-        _draw_history(layout, state)
+        _draw_history(layout, state, expanded)
     elif state.active_tab == "BRANCHES":
         _draw_branches(layout, state)
     elif state.active_tab == "LFS":

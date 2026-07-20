@@ -18,7 +18,7 @@ class GITMANAGER_OT_open_manager(bpy.types.Operator):
 
     def invoke(self, context, _event):
         refresh_repository_state(context)
-        return context.window_manager.invoke_popup(self, width=960)
+        return context.window_manager.invoke_popup(self, width=1280)
 
     def draw(self, context):
         from ..ui.dashboard import draw_dashboard

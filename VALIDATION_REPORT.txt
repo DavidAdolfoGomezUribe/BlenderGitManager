@@ -1,14 +1,18 @@
-Blender Git Manager MVP validation report
+Blender Git Manager validation report
 
-Version: 0.1.6
+Version: 0.1.7
 Manifest: OK (Blender 5.2 extension validate)
 Python compileall: OK
-Unit/integration tests: 100 passed (CPython 3.13)
-Blender register/unregister smoke test: OK (Blender 5.2 LTS)
-Branch reload smoke: OK (scene reload, corrupt-file rollback, failing post-checkout hook, attached/detached HEAD)
-Commit checkout smoke: OK (double-click target, whole-tree checkout, scene reload, corrupt/missing/LFS rollback)
+Unit/integration tests: 148 passed (CPython 3.13)
+Blender History Graph smoke: OK (async load, lanes, merges, refs, filters and details)
+Blender History runtime hardening smoke: OK (Scene affinity, stale-result rejection, cancellation and bounded caches)
+Branch reload smoke: OK (scene reload, corrupt-file rollback, failing post-checkout hook and attached/detached HEAD)
+Commit checkout smoke: OK (button target, whole-tree checkout, scene reload and corrupt/missing/LFS rollback)
 Detached branch smoke: OK (branch creation and switching after loading a historical commit)
-Operator identifiers: 27 unique
+Revert recovery: OK (merge mainline, failed-hook rollback and clean working tree)
+Operator identifiers: 33 unique
 Installable ZIP root: OK
-Security scan: subprocess usage is centralized in ProcessService; shell=False; logs are redacted
-SHA256: 42F49FD6EC35448950B462AA0A3276A3FF556C9684AC2F2EAB2A515918AD4BEC
+Package exclusions: tests, Compressed, __pycache__, .pyc and removed history_interaction excluded
+Security scan: subprocess usage is centralized in ProcessService; shell=False; logs are redacted; Windows descendant cancellation verified
+Compressed folder: untouched
+SHA256: 54A5812FDB2010641D83B2BAC878FE43D2D0D086FC8A1571E697290B121287F2

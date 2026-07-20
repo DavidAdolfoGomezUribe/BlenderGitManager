@@ -8,7 +8,17 @@ from .branches import GITMANAGER_OT_create_branch, GITMANAGER_OT_switch_branch
 from .commits import GITMANAGER_OT_commit, GITMANAGER_OT_quick_save
 from .common import GITMANAGER_OT_open_folder, GITMANAGER_OT_open_preferences, GITMANAGER_OT_open_remote, GITMANAGER_OT_refresh
 from .history import GITMANAGER_OT_checkout_commit
-from .history_interaction import GITMANAGER_OT_history_commit_click
+from .history_actions import (
+    GITMANAGER_OT_copy_commit_hash,
+    GITMANAGER_OT_create_branch_from_commit,
+    GITMANAGER_OT_create_tag_from_commit,
+    GITMANAGER_OT_open_commit_remote,
+    GITMANAGER_OT_revert_commit,
+)
+from .history_runtime import (
+    GITMANAGER_OT_history_load_more,
+    GITMANAGER_OT_history_refresh,
+)
 from .lfs import GITMANAGER_OT_lfs_track, GITMANAGER_OT_lfs_untrack
 from .repository import (
     GITMANAGER_OT_clone_repository,
@@ -41,8 +51,14 @@ CLASSES = (
     GITMANAGER_OT_stage,
     GITMANAGER_OT_unstage,
     GITMANAGER_OT_discard_changes,
+    GITMANAGER_OT_history_refresh,
+    GITMANAGER_OT_history_load_more,
     GITMANAGER_OT_checkout_commit,
-    GITMANAGER_OT_history_commit_click,
+    GITMANAGER_OT_copy_commit_hash,
+    GITMANAGER_OT_create_branch_from_commit,
+    GITMANAGER_OT_create_tag_from_commit,
+    GITMANAGER_OT_open_commit_remote,
+    GITMANAGER_OT_revert_commit,
     GITMANAGER_OT_commit,
     GITMANAGER_OT_quick_save,
     GITMANAGER_OT_synchronize,

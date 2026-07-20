@@ -5,7 +5,7 @@ from zipfile import ZIP_DEFLATED, ZipFile
 
 ROOT = Path(__file__).resolve().parent
 SOURCE = ROOT / "blender_git_manager"
-OUTPUT = ROOT / "dist" / "blender_git_manager-0.1.6.zip"
+OUTPUT = ROOT / "dist" / "blender_git_manager-0.1.7.zip"
 EXCLUDED_PARTS = {"__pycache__", ".git"}
 
 

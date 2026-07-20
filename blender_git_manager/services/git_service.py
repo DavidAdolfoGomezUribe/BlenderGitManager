@@ -3,13 +3,32 @@
 from __future__ import annotations
 
 import re
+from hashlib import sha256
 from pathlib import Path
 from typing import Iterable
 
 from ..constants import MAX_HISTORY_COMMITS
-from ..models import BranchInfo, CommandResult, CommitInfo, FileChange, QuickSaveResult, RemoteInfo, SyncStatus
+from ..models import (
+    BranchInfo,
+    CommandResult,
+    CommitDetails,
+    CommitFileStat,
+    CommitInfo,
+    FileChange,
+    HistoryQuery,
+    QuickSaveResult,
+    RemoteInfo,
+    SyncStatus,
+)
 from ..utils.validation import validate_branch_name, validate_commit_message, validate_tag_name
-from .history_parser import FIELD_SEPARATOR, RECORD_SEPARATOR, parse_git_log
+from .history_parser import (
+    FIELD_SEPARATOR,
+    RECORD_SEPARATOR,
+    parse_git_log,
+    parse_history,
+)
+from .history_diff_parser import parse_commit_diff_z
+from .history_service import parse_commit_references
 from .lfs_push_failures import LFSFailureKind, classify_lfs_push_failure, extract_github_locksverify_key
 from .process_service import ProcessService
 from .status_parser import parse_porcelain_v1
@@ -184,13 +203,16 @@ class GitService:
         object_id = self.resolve_commit(cwd, commit)
         pretty = (
             f"%H{FIELD_SEPARATOR}%P{FIELD_SEPARATOR}%an{FIELD_SEPARATOR}%ae"
-            f"{FIELD_SEPARATOR}%aI{FIELD_SEPARATOR}%D{FIELD_SEPARATOR}%s"
+            f"{FIELD_SEPARATOR}%ad{FIELD_SEPARATOR}%D{FIELD_SEPARATOR}%s"
             f"{FIELD_SEPARATOR}%b{RECORD_SEPARATOR}"
         )
         result = self._run_checked(
             [
                 "log",
                 "-1",
+                "--topo-order",
+                "--date=iso-strict",
+                "--decorate=full",
                 f"--pretty=format:{pretty}",
                 object_id,
                 "--",
@@ -211,6 +233,97 @@ class GitService:
                 f"Git returned metadata for {parsed_id} instead of requested commit {object_id}."
             )
         return info
+
+    def _commit_diff_arguments(
+        self,
+        info: CommitInfo,
+        *,
+        output_mode: str,
+        mainline: int = 1,
+    ) -> list[str]:
+        object_id = self._validated_object_id(info.full_hash)
+        shared = [
+            output_mode,
+            "-z",
+            "--find-renames",
+            "--find-copies",
+            "--find-copies-harder",
+        ]
+        if info.parent_hashes:
+            if len(info.parent_hashes) > 1 and (
+                isinstance(mainline, bool)
+                or not isinstance(mainline, int)
+                or not 1 <= mainline <= len(info.parent_hashes)
+            ):
+                raise GitCommandError(
+                    f"Commit mainline must be between 1 and {len(info.parent_hashes)}."
+                )
+            parent_index = mainline - 1 if len(info.parent_hashes) > 1 else 0
+            selected_parent = self._validated_object_id(
+                info.parent_hashes[parent_index],
+                label=f"Parent {parent_index + 1}",
+            )
+            return [
+                "diff",
+                *shared,
+                selected_parent,
+                object_id,
+                "--",
+            ]
+        return [
+            "diff-tree",
+            "--root",
+            "--no-commit-id",
+            "-r",
+            *shared,
+            object_id,
+            "--",
+        ]
+
+    def commit_details(
+        self,
+        cwd: str | Path,
+        full_hash: str,
+        *,
+        mainline: int = 1,
+    ) -> CommitDetails:
+        """Load metadata and the selected-parent file/stat diff for one exact commit."""
+        object_id = self.resolve_commit(cwd, full_hash)
+        info = self.commit_info(cwd, object_id)
+        numstat = self._run_checked(
+            self._commit_diff_arguments(
+                info,
+                output_mode="--numstat",
+                mainline=mainline,
+            ),
+            cwd,
+            timeout=180,
+        )
+        name_status = self._run_checked(
+            self._commit_diff_arguments(
+                info,
+                output_mode="--name-status",
+                mainline=mainline,
+            ),
+            cwd,
+            timeout=180,
+        )
+        records = parse_commit_diff_z(numstat.stdout, name_status.stdout)
+        files = tuple(
+            CommitFileStat(
+                path=record.path,
+                old_path=record.original_path,
+                status=record.status_token,
+                additions=record.added_lines,
+                deletions=record.deleted_lines,
+            )
+            for record in records
+        )
+        return CommitDetails(
+            commit=info,
+            references=parse_commit_references(info.decorations),
+            files=files,
+        )
 
     def checkout_commit(self, cwd: str | Path, commit: str):
         """Materialize one exact commit in detached-HEAD mode."""
@@ -486,14 +599,107 @@ class GitService:
     def remove_remote(self, cwd: str | Path, name: str):
         return self._run_checked(["remote", "remove", name], cwd, timeout=30)
 
+    def _history_branch_revision(
+        self,
+        cwd: str | Path,
+        branch_filter: str,
+    ) -> str:
+        requested = validate_branch_name(branch_filter)
+        matches = [
+            branch
+            for branch in self.branches(cwd)
+            if branch.name == requested
+            or (
+                branch.remote
+                and branch.name.removeprefix("remotes/") == requested
+            )
+        ]
+        if len(matches) != 1:
+            raise GitCommandError(
+                f"History branch filter '{requested}' does not identify one available branch."
+            )
+        branch = matches[0]
+        if branch.full_ref.startswith(("refs/heads/", "refs/remotes/")):
+            return branch.full_ref
+        name = branch.name.removeprefix("remotes/")
+        return f"refs/remotes/{name}" if branch.remote else f"refs/heads/{name}"
+
+    def history_graph(
+        self,
+        cwd: str | Path,
+        query: HistoryQuery,
+        max_count: int,
+    ) -> list[CommitInfo]:
+        """Load structured commits for the graph without parsing Git's visual graph."""
+        if not isinstance(query, HistoryQuery):
+            raise TypeError("History graph requires a HistoryQuery.")
+        count = max(1, min(int(max_count), 1001))
+        pretty = (
+            f"%H{FIELD_SEPARATOR}%P{FIELD_SEPARATOR}%an{FIELD_SEPARATOR}%ae"
+            f"{FIELD_SEPARATOR}%ad{FIELD_SEPARATOR}%D{FIELD_SEPARATOR}%s"
+            f"{FIELD_SEPARATOR}%b{RECORD_SEPARATOR}"
+        )
+        arguments = [
+            "log",
+            "--topo-order",
+            "--date=iso-strict",
+            "--decorate=full",
+            f"--max-count={count}",
+            f"--skip={query.offset}",
+            f"--pretty=format:{pretty}",
+        ]
+        if query.branch_filter:
+            arguments.append(
+                self._history_branch_revision(cwd, query.branch_filter)
+            )
+        elif query.show_all_branches:
+            arguments.append("--branches")
+            if query.show_remotes:
+                arguments.append("--remotes")
+            if query.show_tags:
+                arguments.append("--tags")
+            head_commit = self.head_commit(cwd)
+            if head_commit:
+                # Detached HEAD is not necessarily reachable from any ref.
+                arguments.append(head_commit)
+        else:
+            arguments.append("HEAD")
+        arguments.append("--")
+
+        result = self._run(arguments, cwd, timeout=180)
+        if not result.successful:
+            head = self._run(
+                ["rev-parse", "--verify", "--end-of-options", "HEAD^{commit}"],
+                cwd,
+                timeout=15,
+            )
+            if not head.successful and not query.branch_filter:
+                return []
+            raise GitCommandError(
+                result.stderr or result.stdout or "Could not load Git history.",
+                result.stderr,
+            )
+        return [
+            parsed.to_commit_info()
+            for parsed in parse_history(result.stdout, include_body=True)
+        ]
+
     def history(self, cwd: str | Path, max_count: int = MAX_HISTORY_COMMITS) -> list[CommitInfo]:
         pretty = (
             f"%H{FIELD_SEPARATOR}%P{FIELD_SEPARATOR}%an{FIELD_SEPARATOR}%ae"
-            f"{FIELD_SEPARATOR}%aI{FIELD_SEPARATOR}%D{FIELD_SEPARATOR}%s"
+            f"{FIELD_SEPARATOR}%ad{FIELD_SEPARATOR}%D{FIELD_SEPARATOR}%s"
             f"{FIELD_SEPARATOR}%b{RECORD_SEPARATOR}"
         )
         result = self._run(
-            ["log", "--all", f"--max-count={max(1, min(max_count, 1000))}", f"--pretty=format:{pretty}"],
+            [
+                "log",
+                "--all",
+                "--topo-order",
+                "--date=iso-strict",
+                "--decorate=full",
+                f"--max-count={max(1, min(max_count, 1000))}",
+                f"--pretty=format:{pretty}",
+            ],
             cwd,
             timeout=120,
         )
@@ -502,32 +708,75 @@ class GitService:
         return parse_git_log(result.stdout)
 
     def branches(self, cwd: str | Path) -> list[BranchInfo]:
-        fmt = "%(HEAD)%00%(refname:short)%00%(upstream:short)%00%(objectname:short)%00%(subject)%00%(authorname)%00%(authordate:iso8601)"
+        fmt = (
+            "%(HEAD)%00%(refname:short)%00%(refname)%00%(upstream:short)%00"
+            "%(objectname:short)%00%(subject)%00%(authorname)%00"
+            "%(authordate:iso8601)"
+        )
         result = self._run_checked(["for-each-ref", "refs/heads", "refs/remotes", f"--format={fmt}"], cwd, timeout=60)
         branches: list[BranchInfo] = []
         for line in result.stdout.splitlines():
             fields = line.split("\x00")
-            if len(fields) < 7:
+            if len(fields) < 8:
                 continue
-            marker, name, upstream, short_hash, subject, author, authored_at = fields[:7]
+            (
+                marker,
+                name,
+                full_ref,
+                upstream,
+                short_hash,
+                subject,
+                author,
+                authored_at,
+            ) = fields[:8]
             branches.append(
                 BranchInfo(
                     name=name,
                     current=marker.strip() == "*",
-                    remote=name.startswith("remotes/") or "/" in name and name.startswith(tuple(r.name + "/" for r in self.remotes(cwd))),
+                    remote=full_ref.startswith("refs/remotes/"),
                     upstream=upstream,
                     short_hash=short_hash,
                     subject=subject,
                     author=author,
                     authored_at=authored_at,
+                    full_ref=full_ref,
                 )
             )
         return branches
+
+    def reference_signature(self, cwd: str | Path) -> str:
+        """Return a stable fingerprint source for every graph-visible Git ref."""
+        result = self._run_checked(
+            [
+                "for-each-ref",
+                "refs/heads",
+                "refs/remotes",
+                "refs/tags",
+                "--format=%(refname)%00%(objectname)",
+            ],
+            cwd,
+            timeout=60,
+        )
+        return sha256(result.stdout.encode("utf-8", errors="surrogatepass")).hexdigest()
 
     def create_branch(self, cwd: str | Path, name: str, switch: bool = True):
         branch = validate_branch_name(name)
         arguments = ["switch", "-c", branch] if switch else ["branch", branch]
         return self._run_checked(arguments, cwd, timeout=60)
+
+    def create_branch_at(
+        self,
+        cwd: str | Path,
+        name: str,
+        commit: str,
+    ):
+        branch = validate_branch_name(name)
+        object_id = self.resolve_commit(cwd, commit)
+        return self._run_checked(
+            ["branch", branch, object_id],
+            cwd,
+            timeout=60,
+        )
 
     def branch_contains_regular_file(
         self,
@@ -675,6 +924,25 @@ class GitService:
         )
         return bool(result.stdout)
 
+    def _git_path_exists(self, cwd: str | Path, name: str) -> bool:
+        result = self._run(
+            ["rev-parse", "--git-path", name],
+            cwd,
+            timeout=15,
+        )
+        if not result.successful or not result.stdout.strip():
+            return False
+        path = Path(result.stdout.strip())
+        if not path.is_absolute():
+            path = Path(cwd) / path
+        return path.exists()
+
+    def _revert_state_exists(self, cwd: str | Path) -> bool:
+        return self._git_path_exists(cwd, "REVERT_HEAD") or self._git_path_exists(
+            cwd,
+            "sequencer",
+        )
+
     def path_has_changes(self, cwd: str | Path, path: str | Path) -> bool:
         root = Path(cwd).expanduser().resolve(strict=False)
         candidate = Path(path)
@@ -794,6 +1062,123 @@ class GitService:
         else:
             arguments.append(tag)
         return self._run_checked(arguments, cwd, timeout=60)
+
+    def create_tag_at(
+        self,
+        cwd: str | Path,
+        name: str,
+        commit: str,
+        message: str = "",
+    ):
+        tag = validate_tag_name(name)
+        object_id = self.resolve_commit(cwd, commit)
+        arguments = ["tag"]
+        if message.strip():
+            arguments.extend(["-a", tag, "-m", message.strip(), object_id])
+        else:
+            arguments.extend([tag, object_id])
+        return self._run_checked(arguments, cwd, timeout=60)
+
+    def revert_commit(
+        self,
+        cwd: str | Path,
+        commit: str,
+        *,
+        mainline: int = 1,
+    ):
+        object_id = self.resolve_commit(cwd, commit)
+        info = self.commit_info(cwd, object_id)
+        if not self.head_branch(cwd):
+            raise GitCommandError("Revert requires an active branch, not detached HEAD.")
+        if self.repository_has_changes(cwd):
+            raise GitCommandError(
+                "Commit or discard every repository change before reverting a commit."
+            )
+        if self._revert_state_exists(cwd):
+            raise GitCommandError(
+                "Finish or abort the current Git sequencer operation before reverting."
+            )
+        arguments = ["revert", "--no-edit"]
+        if info.is_merge:
+            if (
+                isinstance(mainline, bool)
+                or not isinstance(mainline, int)
+                or not 1 <= mainline <= len(info.parent_hashes)
+            ):
+                raise GitCommandError(
+                    f"Merge mainline must be between 1 and {len(info.parent_hashes)}."
+                )
+            arguments.extend(["--mainline", str(mainline)])
+        arguments.append(object_id)
+        source_head = self.head_commit(cwd)
+        result = self._run(arguments, cwd, timeout=600)
+        if result.successful:
+            return result
+
+        # The primary ProcessService may already be cancelled or timed out, so
+        # recovery must use a fresh process channel.
+        recovery = GitService(
+            self.executable,
+            process=ProcessService(echo_console=False),
+        )
+        recovery_messages: list[str] = []
+        recovery_attempts: list[CommandResult] = []
+        try:
+            current_head = recovery.head_commit(cwd)
+        except Exception as exc:
+            current_head = ""
+            recovery_messages.append(f"could not inspect HEAD: {exc}")
+
+        if current_head == source_head:
+            revert_state = False
+            try:
+                revert_state = recovery._revert_state_exists(cwd)
+            except Exception as exc:
+                recovery_messages.append(f"could not inspect revert state: {exc}")
+
+            if revert_state:
+                abort = recovery._run(["revert", "--abort"], cwd, timeout=120)
+                recovery_attempts.append(abort)
+                if not abort.successful:
+                    recovery_messages.append(
+                        abort.stderr or abort.stdout or "git revert --abort failed"
+                    )
+
+            try:
+                if recovery.repository_has_changes(cwd):
+                    restored = recovery.restore_tree_from_commit(cwd, source_head)
+                    recovery_attempts.append(restored)
+            except Exception as exc:
+                recovery_messages.append(f"could not restore the source tree: {exc}")
+
+            try:
+                clean = not recovery.repository_has_changes(cwd)
+                state_cleared = not recovery._revert_state_exists(cwd)
+                head_restored = recovery.head_commit(cwd) == source_head
+                if clean and state_cleared and head_restored:
+                    recovery_messages.append(
+                        "the repository was restored to its pre-revert state"
+                    )
+                else:
+                    recovery_messages.append(
+                        "automatic recovery did not restore a clean pre-revert state"
+                    )
+            except Exception as exc:
+                recovery_messages.append(f"could not verify recovery: {exc}")
+        elif current_head:
+            recovery_messages.append(
+                "HEAD changed while the failed revert was running; no automatic "
+                "tree restore was attempted"
+            )
+
+        detail = result.stderr or result.stdout or "Git revert failed."
+        if recovery_messages:
+            detail += " Recovery: " + " | ".join(recovery_messages)
+        raise GitCommandError(
+            detail,
+            result.stderr,
+            (result, *recovery_attempts),
+        )
 
     def sync_status(self, cwd: str | Path) -> SyncStatus:
         upstream = self.current_upstream(cwd)

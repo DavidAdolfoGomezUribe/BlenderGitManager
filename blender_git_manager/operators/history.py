@@ -163,7 +163,15 @@ def _reload_blend_from_commit(
             setattr(fresh_state, field, value)
         fresh_state.repository_path = repository_path
         refresh_repository_state(fresh_context, include_dependencies=False)
-        _select_history_commit(fresh_state, commit_hash)
+        if not _select_history_commit(fresh_state, commit_hash):
+            # Normal UI checkouts restore the already-loaded background cache.
+            # Keep a synchronous fallback for direct/scripted operator calls.
+            refresh_repository_state(
+                fresh_context,
+                include_dependencies=False,
+                include_history=True,
+            )
+            _select_history_commit(fresh_state, commit_hash)
         append_output(
             fresh_context,
             f"Loaded commit {commit_hash[:8]} and reloaded {expected_path.name}. "
@@ -261,6 +269,9 @@ class GITMANAGER_OT_checkout_commit(bpy.types.Operator):
 
     commit_hash: StringProperty(options={"SKIP_SAVE"})
     commit_index: IntProperty(default=-1, options={"SKIP_SAVE"})
+
+    def invoke(self, context, event):
+        return context.window_manager.invoke_confirm(self, event)
 
     def execute(self, context):
         state = context.scene.git_manager

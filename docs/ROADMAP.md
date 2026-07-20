@@ -1,27 +1,29 @@
 # Roadmap
 
+## Entregado en 0.1.7
+
+- Git Graph visual con carriles, bifurcaciones, merges y referencias.
+- Búsqueda por autor, hash y mensaje, filtro de rama y carga incremental.
+- Historial con archivos modificados y estadísticas por commit.
+- Tags ligeros y anotados desde commits.
+- Creación de ramas desde commits.
+- Revert y checkout de commits con confirmación y recarga segura de la escena.
+
 ## Fase 2
 
 - CRUD completo de remotos.
 - Stash con mensaje e inclusión de untracked.
-- Tags ligeros y anotados.
-- Historial con archivos de cada commit.
-- `git show --name-status` y `git show --stat`.
-- Creación de ramas desde commits.
 - Indicadores de upstream por rama.
 - Publicación de ramas y tags.
 - Pantalla dedicada para crear repositorios GitHub con README/licencia.
 
 ## Fase 3
 
-- Grafo visual con carriles, merges y filtros.
 - Merge controlado y detección previa de dirty working tree.
-- Revert y checkout con respaldo obligatorio.
 - Conflictos de texto: ours, theirs, resolved y editor externo.
 - Conflictos `.blend`: backup de ambas variantes y selección explícita.
 - Centro persistente de tareas y cancelación de árboles de procesos completos.
 - Progreso LFS mediante parsing de stderr y eventos de transferencia.
-- Búsqueda por autor, hash, rama y mensaje.
 
 ## Fase 4
 

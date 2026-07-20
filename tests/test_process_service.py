@@ -4,9 +4,12 @@ import io
 import os
 import subprocess
 import sys
+import tempfile
 import threading
+import time
 import unittest
 from contextlib import redirect_stdout
+from pathlib import Path
 from unittest.mock import patch
 
 from blender_git_manager.services.process_service import ProcessService
@@ -179,6 +182,50 @@ class ProcessServiceTests(unittest.TestCase):
         follow_up = service.run(sys.executable, ["-c", "print('after-reset')"], timeout=10)
         self.assertTrue(follow_up.successful, follow_up.stderr)
         self.assertEqual(follow_up.stdout, "after-reset")
+
+    @unittest.skipUnless(os.name == "nt", "Windows process-tree cancellation test")
+    def test_cancel_stops_descendant_processes_on_windows(self):
+        ready = threading.Event()
+        result_box = {}
+        with tempfile.TemporaryDirectory() as temporary:
+            marker = Path(temporary) / "descendant-survived.txt"
+            child = (
+                "import pathlib,time; "
+                "time.sleep(1.5); "
+                f"pathlib.Path({str(marker)!r}).write_text('survived')"
+            )
+            parent = (
+                "import subprocess,sys,time; "
+                f"subprocess.Popen([sys.executable, '-c', {child!r}]); "
+                "print('tree-ready', flush=True); "
+                "time.sleep(30)"
+            )
+
+            def output_callback(_level: str, message: str) -> None:
+                if "tree-ready" in message:
+                    ready.set()
+
+            service = ProcessService(
+                default_timeout=30,
+                output_callback=output_callback,
+                echo_console=False,
+            )
+
+            def run_process() -> None:
+                result_box["result"] = service.run(
+                    sys.executable,
+                    ["-c", parent],
+                )
+
+            worker = threading.Thread(target=run_process, daemon=True)
+            worker.start()
+            self.assertTrue(ready.wait(5), "process tree never became ready")
+            service.cancel()
+            worker.join(10)
+            self.assertFalse(worker.is_alive())
+            time.sleep(1.8)
+            self.assertFalse(marker.exists(), "cancel() left a descendant process running")
+            self.assertTrue(result_box["result"].cancelled)
 
     def test_output_callback_receives_only_redacted_process_text(self):
         events: list[tuple[str, str]] = []

@@ -2,7 +2,7 @@
 
 **Blender Git Manager** es una extensión para Blender 4.2 o superior que integra un flujo visual de Git, Git LFS y GitHub CLI dentro de Blender. Está dirigida a artistas 3D y equipos que trabajan con archivos binarios grandes y quieren crear versiones sin escribir comandos manualmente.
 
-Esta entrega implementa una base ejecutable del **MVP** descrito en el documento de requisitos. La arquitectura está preparada para ampliar posteriormente el gráfico de ramas, stash, tags, merges, resolución avanzada de conflictos, GitLab y Bitbucket.
+Esta entrega implementa una base ejecutable del **MVP** descrito en el documento de requisitos. La arquitectura está preparada para ampliar posteriormente stash, merges, resolución avanzada de conflictos, GitLab y Bitbucket.
 
 ## Funciones incluidas en el MVP
 
@@ -33,9 +33,11 @@ Esta entrega implementa una base ejecutable del **MVP** descrito en el documento
 - Fetch, Pull `--ff-only`, Push y Sync.
 - Recuperación limitada de pushes LFS ante locks no disponibles y errores transitorios HTTP 5xx.
 - Detección de upstream, commits ahead y behind.
-- Historial estructurado de hasta 100 commits.
-- Detalles básicos del commit seleccionado.
-- Doble clic sobre un commit para materializar todo su árbol y recargar la escena en `Detached HEAD`.
+- Git Graph estructurado con 200 commits iniciales, carga incremental hasta 1000, carriles, bifurcaciones y merges.
+- Identificación visual de HEAD, ramas locales/remotas y tags, con búsqueda y filtros.
+- Detalles del commit seleccionado, archivos modificados, estadísticas y acciones de History.
+- Botón **Load Selected Commit** para materializar todo el árbol y recargar la escena en `Detached HEAD`.
+- Carga de History y detalles en segundo plano sin acceder a la API de Blender desde el worker.
 - Lista de ramas locales y remotas.
 - Creación y cambio de rama con respaldo previo y recarga automática del `.blend` de la rama destino.
 - Gestión inicial de patrones Git LFS.
@@ -55,7 +57,7 @@ El complemento continúa ofreciendo Git local cuando GitHub CLI no está instala
 
 ## Instalación rápida
 
-1. Descarga `blender_git_manager-0.1.6.zip`.
+1. Descarga `blender_git_manager-0.1.7.zip`.
 2. En Blender abre **Edit > Preferences > Add-ons** o **Extensions**.
 3. Selecciona **Install from Disk**.
 4. Elige el ZIP sin descomprimirlo.
@@ -88,7 +90,8 @@ blender_git_manager/
 ├── state_sync.py                Sincronización servicios → propiedades de Blender
 ├── models/
 │   ├── __init__.py
-│   └── domain.py                Modelos tipados independientes de Blender
+│   ├── domain.py                Modelos generales independientes de Blender
+│   └── history.py               Modelos tipados del Git Graph y sus detalles
 ├── operators/
 │   ├── __init__.py              Registro ordenado de operadores
 │   ├── base.py                  Infraestructura modal para tareas largas
@@ -99,7 +102,8 @@ blender_git_manager/
 │   ├── synchronization.py       Fetch, pull, push y sync
 │   ├── branches.py              Crear y cambiar ramas
 │   ├── history.py               Checkout de commits y recarga segura de la escena
-│   ├── history_interaction.py   Doble clic y selección en la vista History
+│   ├── history_actions.py       Acciones del commit seleccionado
+│   ├── history_runtime.py       Coordinador asíncrono History → hilo principal
 │   ├── lfs.py                   Track y untrack de patrones LFS
 │   └── common.py                Refresh, carpetas, navegador y preferencias
 ├── services/
@@ -109,7 +113,10 @@ blender_git_manager/
 │   ├── github_service.py        Fachada de GitHub CLI
 │   ├── repository_service.py    Flujos de negocio compuestos
 │   ├── lfs_push_failures.py     Clasificación segura y recuperación de errores LFS
-│   ├── history_parser.py        Parser del historial con separadores seguros
+│   ├── history_parser.py        Parser estructurado del historial Git
+│   ├── history_diff_parser.py   Parser NUL-safe de archivos y estadísticas
+│   ├── history_service.py       Consultas, filtros y detalles de History
+│   ├── graph_layout_service.py  Algoritmo independiente de carriles
 │   ├── status_parser.py         Parser de git status porcelain
 │   ├── background_task_service.py Cola reutilizable de tareas
 │   └── credential_service.py    Política explícita de no almacenar secretos
@@ -209,8 +216,8 @@ También puede usarse el comando oficial de Blender para construir extensiones d
 
 ## Limitaciones de esta primera versión
 
-- El historial es una lista estructurada, todavía no dibuja carriles de colores como Git Graph.
-- No implementa aún stash, tags, merge, revert ni reset desde la interfaz.
+- El Git Graph usa componentes nativos de Blender; los carriles se distinguen mediante nodos de color y conexiones ortogonales adaptadas al ancho disponible.
+- No implementa aún stash, creación de merges ni reset desde la interfaz.
 - Los conflictos `.blend` se detectan, pero la resolución guiada y el respaldo de ambas variantes pertenecen a la siguiente fase.
 - Pull usa `--ff-only` para evitar merges automáticos inesperados.
 - Presionar Escape solicita la terminación del proceso externo y mantiene la tarea ocupada hasta confirmar su finalización.
@@ -220,7 +227,7 @@ También puede usarse el comando oficial de Blender para construir extensiones d
 
 ## Próximas fases
 
-Consulta `docs/ROADMAP.md` para el diseño de stash, tags, gráfico visual, conflictos binarios, bloqueo de archivos, proveedores adicionales y colaboración en equipo.
+Consulta `docs/ROADMAP.md` para el diseño de stash, merges controlados, conflictos binarios, bloqueo de archivos, proveedores adicionales y colaboración en equipo.
 
 ## Licencia
 
