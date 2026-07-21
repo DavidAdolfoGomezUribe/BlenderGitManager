@@ -1,6 +1,7 @@
 Blender Git Manager validation report
 
 Version: 0.1.8
+Documentation: English (README, requirements, architecture, reference, roadmap, and validation report)
 Root cause fixed: OK (Blender 5.2 prop_search keyword-only UI regression)
 Manifest: OK (Blender 5.2 extension validate)
 Python compileall: OK
@@ -17,4 +18,4 @@ Installable ZIP root: OK
 Package exclusions: tests, Compressed, __pycache__, .pyc and removed history_interaction excluded
 Security scan: subprocess usage is centralized in ProcessService; shell=False; logs are redacted; Windows descendant cancellation verified
 Compressed folder: untouched
-SHA256: B3F631EFC09923D32FF66E5D871B7A30BD7620B3981A989480AC662F52448E8F
+SHA256: 2259BCD34C9CF5E9C0440EEA6D08CDFCE64FFAE7A6C0A0A9C466BB95B8EE8299

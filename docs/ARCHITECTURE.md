@@ -1,69 +1,69 @@
-# Arquitectura técnica
+# Technical architecture
 
-## Principios
+## Principles
 
-1. **La interfaz no ejecuta comandos directamente.** Los operadores llaman a servicios.
-2. **Todo proceso externo pasa por `ProcessService`.** Se prohíbe `shell=True`.
-3. **Los modelos de dominio no dependen de Blender.** Esto permite pruebas unitarias.
-4. **Los hilos no modifican `bpy`.** `ProcessService` encola la salida incremental y los operadores modales la aplican en el hilo principal.
-5. **El repositorio local es independiente de GitHub.** Un fallo remoto nunca invalida un repositorio local ya creado.
-6. **No existe almacenamiento de credenciales.** La autenticación se delega en `gh` y gestores del sistema.
+1. **The UI does not execute commands directly.** Operators call services.
+2. **Every external process goes through `ProcessService`.** `shell=True` is forbidden.
+3. **Domain models do not depend on Blender.** This enables unit tests.
+4. **Threads do not modify `bpy`.** `ProcessService` queues incremental output and modal operators apply it on the main thread.
+5. **The local repository is independent of GitHub.** A remote failure never invalidates an already-created local repository.
+6. **Credentials are not stored.** Authentication is delegated to `gh` and system credential managers.
 
-## Capas
+## Layers
 
 ### UI
 
-`ui/dashboard.py` concentra el diseño para reutilizarlo tanto en el panel lateral como en la ventana emergente. Las `UIList` no consultan Git; solo dibujan colecciones RNA.
+`ui/dashboard.py` centralizes the layout so it can be reused by both the sidebar panel and the popup window. `UIList` classes do not query Git; they only draw RNA collections.
 
-### Operadores
+### Operators
 
-Los operadores validan contexto Blender, guardan el archivo cuando corresponde y delegan la operación. Las tareas de red usan `AsyncModalMixin`.
+Operators validate Blender context, save the file when appropriate, and delegate the operation. Network tasks use `AsyncModalMixin`.
 
-### Sincronización de estado
+### State synchronization
 
-`state_sync.py` convierte un `RepositorySnapshot` en propiedades Blender. También es el único lugar que rellena las colecciones de cambios, commits y ramas.
+`state_sync.py` converts a `RepositorySnapshot` into Blender properties. It is also the only place that populates the changes, commits, and branches collections.
 
-### Servicios
+### Services
 
-- `GitService`: comandos atómicos y parsing.
-- `LFSService`: comandos `git lfs`.
-- `GitHubService`: comandos `gh`.
-- `RepositoryService`: flujos compuestos como init y clone.
-- `ProcessService`: `Popen` seguro, salida incremental saneada, timeout y cancelación.
+- `GitService`: atomic commands and parsing.
+- `LFSService`: `git lfs` commands.
+- `GitHubService`: `gh` commands.
+- `RepositoryService`: composite workflows such as initialization and cloning.
+- `ProcessService`: safe `Popen`, sanitized incremental output, timeout, and cancellation.
 
-### Modelos
+### Models
 
-Los dataclasses describen resultados de comandos, archivos modificados, commits, ramas, remotos, estado de sincronización y progreso del asistente.
+Dataclasses describe command results, changed files, commits, branches, remotes, synchronization state, and wizard progress.
 
-## Flujo de inicialización
+## Initialization flow
 
 ```text
 Blender Operator
-  ├─ guarda .blend en hilo principal
-  ├─ construye InitConfig
-  └─ inicia tarea modal
+  ├─ saves .blend on the main thread
+  ├─ builds InitConfig
+  └─ starts modal task
        └─ RepositoryService.initialize_repository
-            ├─ valida carpeta e identidad
+            ├─ validates folder and identity
             ├─ git init
             ├─ git config
             ├─ .gitignore
             ├─ git lfs install --local
             ├─ git lfs track
             ├─ stage
-            ├─ commit inicial
-            └─ gh repo create opcional
+            ├─ initial commit
+            └─ optional gh repo create
 ```
 
-Cada etapa genera un `InitStep` con estado `running`, `completed`, `failed` o `skipped`. La interfaz registra el resultado de todos los pasos.
+Each stage produces an `InitStep` with the status `running`, `completed`, `failed`, or `skipped`. The UI records the result of every step.
 
-## Evolución del gráfico Git
+## Git Graph evolution
 
-La fase siguiente debe separar:
+The next phase must separate:
 
-1. Consulta estructurada con `git log`.
-2. Asignación de carriles mediante un algoritmo de columnas activas por hash padre.
-3. Modelo visual `GraphLane`, `GraphNode` y `GraphEdge`.
-4. Render mediante `gpu`/`blf` en un editor o región dedicada.
-5. Selección de commits conectada con el panel de detalles.
+1. Structured querying with `git log`.
+2. Lane assignment through an active-column algorithm keyed by parent hashes.
+3. A visual model of `GraphLane`, `GraphNode`, and `GraphEdge`.
+4. Rendering with `gpu`/`blf` in a dedicated editor or region.
+5. Commit selection connected to the details panel.
 
-No debe analizarse el texto de `git log --graph`; el grafo debe construirse desde hashes y padres.
+The text output of `git log --graph` must not be parsed; the graph must be built from hashes and parents.

@@ -1,144 +1,144 @@
 # Blender Git Manager
 
-**Blender Git Manager** es una extensión para Blender 4.2 o superior que integra un flujo visual de Git, Git LFS y GitHub CLI dentro de Blender. Está dirigida a artistas 3D y equipos que trabajan con archivos binarios grandes y quieren crear versiones sin escribir comandos manualmente.
+**Blender Git Manager** is a Blender 4.2+ extension that brings a visual Git, Git LFS, and GitHub CLI workflow directly into Blender. It is designed for 3D artists and teams working with large binary files who want to create versions without manually typing terminal commands.
 
-Esta entrega implementa una base ejecutable del **MVP** descrito en el documento de requisitos. La arquitectura está preparada para ampliar posteriormente stash, merges, resolución avanzada de conflictos, GitLab y Bitbucket.
+This release provides an executable foundation for the **MVP** described in the requirements document. The architecture is ready to be extended later with stash support, merges, advanced conflict resolution, GitLab, and Bitbucket.
 
-## Funciones incluidas en el MVP
+## MVP features
 
-- Menú **Git** en la barra superior de Blender.
-- Panel **Git** en la barra lateral de la Vista 3D.
-- Ventana amplia emergente con el panel principal.
-- Detección de `git`, `git lfs` y `gh`.
-- Autenticación de GitHub mediante `gh auth login --web`, con código temporal visible y recopiable.
-- Detección automática del repositorio que contiene el archivo `.blend`.
-- Asociación visible de otro repositorio con la sesión actual.
-- Asistente visual para inicializar un repositorio.
-- Selección de carpeta, nombre, rama inicial e identidad Git.
-- Generación o ampliación segura de `.gitignore`.
-- Inicialización local de Git LFS y selección de patrones frecuentes.
-- Guardado del `.blend` dentro del repositorio antes de inicializar.
-- Stage all o stage recomendado y creación del primer commit.
-- Creación opcional de un repositorio en GitHub con `gh repo create`.
-- Apertura de repositorios existentes.
-- Clonación mediante Git o GitHub CLI.
-- Descarga posterior de objetos LFS cuando el repositorio usa `.gitattributes`.
-- Lista visual de archivos modificados, nuevos, staged y en conflicto.
-- Stage y unstage por archivo, por selección o global.
-- Descarte de cambios con confirmación.
-- Campo visual para título y descripción del commit.
-- Guardado automático de Blender antes del commit.
-- Commit y Commit + Push.
-- Quick Save desde el menú superior: prepara todos los cambios, crea `Quick Save N` y publica la rama activa.
-- Fetch, Pull `--ff-only`, Push y Sync.
-- Recuperación limitada de pushes LFS ante locks no disponibles y errores transitorios HTTP 5xx.
-- Detección de upstream, commits ahead y behind.
-- Git Graph estructurado con 200 commits iniciales, carga incremental hasta 1000, carriles de colores, nodos alineados, bifurcaciones y merges.
-- Identificación visual de HEAD, ramas locales/remotas y tags, con búsqueda y filtros.
-- Detalles del commit seleccionado, archivos modificados, estadísticas y acciones de History.
-- Botón **Load Selected Commit** para materializar todo el árbol y recargar la escena en `Detached HEAD`.
-- Carga de History y detalles en segundo plano sin acceder a la API de Blender desde el worker.
-- Lista de ramas locales y remotas.
-- Creación y cambio de rama con respaldo previo y recarga automática del `.blend` de la rama destino.
-- Gestión inicial de patrones Git LFS.
-- Panel de salida amigable y sin secretos.
-- Operaciones de red mediante operadores modales para evitar congelar la interfaz.
-- Pruebas unitarias e integración local para módulos que no dependen de `bpy`.
+- A **Git** menu in Blender's top bar.
+- A **Git** panel in the 3D View sidebar.
+- A large popup window containing the main manager.
+- Detection of `git`, `git lfs`, and `gh`.
+- GitHub authentication through `gh auth login --web`, with a visible, copyable temporary code.
+- Automatic detection of the repository containing the `.blend` file.
+- Visible association of another repository with the current session.
+- A visual repository-initialization wizard.
+- Folder, repository name, initial branch, and Git identity selection.
+- Safe creation or extension of `.gitignore`.
+- Local Git LFS initialization and common-pattern selection.
+- Saving the `.blend` file inside the repository before initialization.
+- Stage-all or recommended staging, followed by initial-commit creation.
+- Optional GitHub repository creation through `gh repo create`.
+- Opening existing repositories.
+- Cloning through Git or GitHub CLI.
+- Post-clone download of LFS objects when the repository uses `.gitattributes`.
+- A visual list of modified, new, staged, and conflicted files.
+- Stage and unstage by file, selection, or globally.
+- Confirmed discard-changes action.
+- Visual commit title and description fields.
+- Automatic Blender save before committing.
+- Commit and Commit + Push actions.
+- Quick Save from the top menu: stages all changes, creates `Quick Save N`, and pushes the active branch.
+- Fetch, `--ff-only` Pull, Push, and Sync.
+- Limited LFS-push recovery for unavailable locks and transient HTTP 5xx errors.
+- Upstream, ahead, and behind detection.
+- A structured Git Graph with an initial 200 commits, incremental loading up to 1,000, colored lanes, aligned nodes, forks, and merges.
+- Visual identification of HEAD, local and remote branches, and tags, with search and filters.
+- Selected-commit details, changed files, statistics, and History actions.
+- A **Load Selected Commit** button that materializes the complete tree and reloads the scene in `Detached HEAD`.
+- Background loading for History and commit details without accessing the Blender API from worker threads.
+- Local and remote branch lists.
+- Branch creation and switching with a prior backup and automatic reload of the destination branch's `.blend` file.
+- Initial Git LFS pattern management.
+- A user-friendly, secret-safe output panel.
+- Modal network operations to avoid freezing the interface.
+- Local unit and integration tests for modules that do not depend on `bpy`.
 
-## Requisitos
+## Requirements
 
-- Blender 4.2 o superior.
-- Windows 10 u 11 para el objetivo inicial.
-- Git instalado y disponible en `PATH`.
-- Git LFS instalado.
-- GitHub CLI para autenticación y operaciones específicas de GitHub.
+- Blender 4.2 or later.
+- Windows 10 or Windows 11 for the initial target platform.
+- Git installed and available in `PATH`.
+- Git LFS installed.
+- GitHub CLI for authentication and GitHub-specific operations.
 
-El complemento continúa ofreciendo Git local cuando GitHub CLI no está instalado. Git LFS solo se exige cuando el usuario lo activa.
+The extension continues to provide local Git functionality when GitHub CLI is not installed. Git LFS is only required when the user enables it.
 
-## Instalación rápida
+## Quick installation
 
-1. Descarga `blender_git_manager-0.1.8.zip`.
-2. En Blender abre **Edit > Preferences > Add-ons** o **Extensions**.
-3. Selecciona **Install from Disk**.
-4. Elige el ZIP sin descomprimirlo.
-5. Habilita **Blender Git Manager**.
-6. Abre el menú superior **Git > Open Git Manager**.
-7. Presiona **Refresh** para comprobar las dependencias.
+1. Download `blender_git_manager-0.1.8.zip`.
+2. In Blender, open **Edit > Preferences > Add-ons** or **Extensions**.
+3. Select **Install from Disk**.
+4. Choose the ZIP without extracting it.
+5. Enable **Blender Git Manager**.
+6. Open **Git > Open Git Manager** from the top menu.
+7. Press **Refresh** to check dependencies.
 
-## Primer flujo recomendado
+## Recommended first workflow
 
-1. Guarda o abre tu proyecto Blender.
-2. Abre **Git > Initialize Repository**.
-3. Confirma la carpeta y la rama `main`.
-4. Configura nombre y correo de Git.
-5. Mantén activo **Create Blender .gitignore**.
-6. Activa Git LFS y, como mínimo, `*.blend`.
-7. Selecciona **Stage All** o **Stage Recommended**.
-8. Crea el commit inicial.
-9. Para publicar en GitHub, autentícate con **Connect in Browser**.
-10. Crea el remoto desde el asistente o desde **Create on GitHub**.
+1. Save or open your Blender project.
+2. Open **Git > Initialize Repository**.
+3. Confirm the folder and the `main` branch.
+4. Configure your Git name and email address.
+5. Keep **Create Blender .gitignore** enabled.
+6. Enable Git LFS and select at least `*.blend`.
+7. Select **Stage All** or **Stage Recommended**.
+8. Create the initial commit.
+9. To publish on GitHub, authenticate with **Connect in Browser**.
+10. Create the remote through the wizard or **Create on GitHub**.
 
-## Estructura
+## Project structure
 
 ```text
 blender_git_manager/
-├── __init__.py                  Registro principal y temporizador de actualización
-├── blender_manifest.toml        Manifiesto de extensión Blender 4.2+
-├── constants.py                 Patrones y valores predeterminados
-├── preferences.py               Preferencias y rutas de ejecutables
-├── properties.py                Estado RNA visible por la interfaz
-├── state_sync.py                Sincronización servicios → propiedades de Blender
+├── __init__.py                  Main registration and refresh timer
+├── blender_manifest.toml        Blender 4.2+ extension manifest
+├── constants.py                 Default values and patterns
+├── preferences.py               Preferences and executable paths
+├── properties.py                RNA state visible to the UI
+├── state_sync.py                Service-to-Blender-property synchronization
 ├── models/
 │   ├── __init__.py
-│   ├── domain.py                Modelos generales independientes de Blender
-│   └── history.py               Modelos tipados del Git Graph y sus detalles
+│   ├── domain.py                General Blender-independent models
+│   └── history.py               Typed Git Graph and detail models
 ├── operators/
-│   ├── __init__.py              Registro ordenado de operadores
-│   ├── base.py                  Infraestructura modal para tareas largas
-│   ├── authentication.py        Login y logout de GitHub CLI
-│   ├── repository.py            Init, open, clone, remote y GitHub repo
-│   ├── staging.py               Stage, unstage y discard
-│   ├── commits.py               Commit, Commit + Push y Quick Save
-│   ├── synchronization.py       Fetch, pull, push y sync
-│   ├── branches.py              Crear y cambiar ramas
-│   ├── history.py               Checkout de commits y recarga segura de la escena
-│   ├── history_actions.py       Acciones del commit seleccionado
-│   ├── history_runtime.py       Coordinador asíncrono History → hilo principal
-│   ├── lfs.py                   Track y untrack de patrones LFS
-│   └── common.py                Refresh, carpetas, navegador y preferencias
+│   ├── __init__.py              Ordered operator registration
+│   ├── base.py                  Modal infrastructure for long-running tasks
+│   ├── authentication.py        GitHub CLI login and logout
+│   ├── repository.py            Initialize, open, clone, remotes, and GitHub repositories
+│   ├── staging.py               Stage, unstage, and discard
+│   ├── commits.py               Commit, Commit + Push, and Quick Save
+│   ├── synchronization.py       Fetch, pull, push, and sync
+│   ├── branches.py              Create and switch branches
+│   ├── history.py               Commit checkout and safe scene reload
+│   ├── history_actions.py       Selected-commit actions
+│   ├── history_runtime.py       Asynchronous History-to-main-thread coordinator
+│   ├── lfs.py                   LFS pattern track and untrack
+│   └── common.py                Refresh, folders, browser, and preferences
 ├── services/
-│   ├── process_service.py       Único punto de ejecución de procesos
-│   ├── git_service.py           Fachada de comandos Git
-│   ├── lfs_service.py           Fachada de Git LFS
-│   ├── github_service.py        Fachada de GitHub CLI
-│   ├── repository_service.py    Flujos de negocio compuestos
-│   ├── lfs_push_failures.py     Clasificación segura y recuperación de errores LFS
-│   ├── history_parser.py        Parser estructurado del historial Git
-│   ├── history_diff_parser.py   Parser NUL-safe de archivos y estadísticas
-│   ├── history_service.py       Consultas, filtros y detalles de History
-│   ├── graph_layout_service.py  Algoritmo independiente de carriles
-│   ├── status_parser.py         Parser de git status porcelain
-│   ├── background_task_service.py Cola reutilizable de tareas
-│   └── credential_service.py    Política explícita de no almacenar secretos
+│   ├── process_service.py       Single external-process execution point
+│   ├── git_service.py           Git command facade
+│   ├── lfs_service.py           Git LFS facade
+│   ├── github_service.py        GitHub CLI facade
+│   ├── repository_service.py    Composite business workflows
+│   ├── lfs_push_failures.py     Safe LFS failure classification and recovery
+│   ├── history_parser.py        Structured Git-history parser
+│   ├── history_diff_parser.py   NUL-safe changed-file and statistics parser
+│   ├── history_service.py       History queries, filters, and details
+│   ├── graph_layout_service.py  Independent lane-layout algorithm
+│   ├── status_parser.py         Git status porcelain parser
+│   ├── background_task_service.py Reusable task queue
+│   └── credential_service.py    Explicit no-secret-storage policy
 ├── ui/
 │   ├── __init__.py
-│   ├── top_menu.py              Menú Git superior
-│   ├── main_panel.py            Panel lateral
-│   ├── dashboard.py             Diseño del administrador principal
-│   ├── graph_icons.py           Conexiones y nodos RGBA del Git Graph
-│   └── lists.py                 UILists de cambios, commits, ramas y salida
+│   ├── top_menu.py              Top Git menu
+│   ├── main_panel.py            Sidebar panel
+│   ├── dashboard.py             Main manager layout
+│   ├── graph_icons.py           RGBA Git Graph connections and nodes
+│   └── lists.py                 UILists for changes, commits, branches, and output
 └── utils/
     ├── __init__.py
-    ├── backups.py               Respaldo timestamp del archivo Blender
-    ├── checkout.py              Planificación y rollback seguro del árbol Git
-    ├── formatting.py            Tamaños y redacción de argumentos
-    ├── paths.py                 Normalización y relación entre rutas
-    └── validation.py            Validación de refs, nombres y carpetas
+    ├── backups.py               Timestamped Blender-file backup
+    ├── checkout.py              Safe Git-tree checkout planning and rollback
+    ├── formatting.py            Sizes and argument redaction
+    ├── paths.py                 Path normalization and relationships
+    └── validation.py            Ref, name, and folder validation
 ```
 
-## Seguridad
+## Security
 
-Todos los procesos pasan por `ProcessService` y usan:
+All processes go through `ProcessService` and use:
 
 ```python
 subprocess.Popen(
@@ -150,11 +150,11 @@ subprocess.Popen(
 )
 ```
 
-La salida se consume de forma incremental desde lectores separados para evitar bloqueos, se envía a la consola de Blender y se incorpora a `Git Output` desde el hilo principal. No se concatenan comandos, no se ejecuta texto arbitrario y no existe una API para guardar tokens. Las credenciales siguen bajo responsabilidad de GitHub CLI, Git Credential Manager o el agente SSH del sistema.
+Output is consumed incrementally through separate readers to prevent deadlocks, sent to the Blender console, and added to **Git Output** from the main thread. Commands are not concatenated, arbitrary text is not executed, and there is no API for storing tokens. Credentials remain the responsibility of GitHub CLI, Git Credential Manager, or the system SSH agent.
 
-El registro redacta argumentos y salida relacionados con `token`, `password`, `secret`, `credential`, cabeceras de autorización, credenciales en URL y códigos OAuth temporales. El `.gitignore` recomendado bloquea `.env`, claves privadas y `credentials.json`.
+Logging redacts arguments and output related to `token`, `password`, `secret`, `credential`, authorization headers, credentials embedded in URLs, and temporary OAuth codes. The recommended `.gitignore` excludes `.env`, private keys, and `credentials.json`.
 
-## Comandos principales utilizados
+## Main commands used
 
 ```text
 git rev-parse --show-toplevel
@@ -162,74 +162,74 @@ git init -b main
 git config user.name ...
 git config user.email ...
 git status --porcelain=v1 --untracked-files=all
-git add -- <archivos>
+git add -- <files>
 git add --all
-git restore --staged -- <archivos>
-git commit -m <título> -m <descripción>
+git restore --staged -- <files>
+git commit -m <title> -m <description>
 git commit -m "Quick Save N"
 git fetch origin --prune
 git pull --ff-only
 git push origin
-git push [-u] <remoto> <rama>:refs/heads/<rama-remota>
+git push [-u] <remote> <branch>:refs/heads/<remote-branch>
 git -c lfs.<url>.locksverify=false push ...
-git log --all --pretty=format:<formato estructurado>
+git log --all --pretty=format:<structured-format>
 git for-each-ref ...
 git lfs install --local
-git lfs track <patrón>
+git lfs track <pattern>
 git lfs ls-files --long --size
 gh auth login --hostname github.com --git-protocol https --web --clipboard
 gh auth status --hostname github.com
 gh repo create ... --source . --remote origin --push
-gh repo clone owner/repository destino
+gh repo clone owner/repository destination
 ```
 
-## Desarrollo y pruebas
+## Development and testing
 
-Las pruebas no necesitan Blender porque los servicios y modelos no importan `bpy`.
+Tests do not require Blender because services and models do not import `bpy`.
 
 ```bash
 cd blender_git_manager_project
 python -m unittest discover -s tests -v
 ```
 
-Para comprobar sintaxis:
+To check syntax:
 
 ```bash
 python -m compileall blender_git_manager
 ```
 
-Para construir el ZIP manualmente desde la carpeta del complemento:
+To build the ZIP manually from the add-on folder:
 
 ```bash
 cd blender_git_manager
 python ../build_extension.py
 ```
 
-También puede usarse el comando oficial de Blender para construir extensiones desde la carpeta que contiene `blender_manifest.toml`.
+You can also use Blender's official extension-build command from the folder containing `blender_manifest.toml`.
 
-## Depuración dentro de Blender
+## Debugging inside Blender
 
-- Activa **Show developer output** en las preferencias del complemento.
-- Abre **Window > Toggle System Console** en Windows para ver comandos, stdout, stderr, duración y código de salida en tiempo real.
-- Utiliza la pestaña **Output** del panel Git para revisar las mismas operaciones, incluso antes de abrir o inicializar un repositorio.
-- Para recargar durante desarrollo, desactiva y vuelve a activar la extensión.
-- Evita modificar datos de Blender desde hilos secundarios. Los operadores modales aplican resultados desde el hilo principal.
+- Enable **Show developer output** in the extension preferences.
+- On Windows, open **Window > Toggle System Console** to see commands, stdout, stderr, duration, and exit codes in real time.
+- Use the Git panel's **Output** tab to review the same operations, even before opening or initializing a repository.
+- To reload during development, disable and re-enable the extension.
+- Do not modify Blender data from worker threads. Modal operators apply results from the main thread.
 
-## Limitaciones de esta primera versión
+## First-version limitations
 
-- El Git Graph usa componentes nativos de Blender; los carriles se distinguen mediante nodos de color y conexiones ortogonales adaptadas al ancho disponible.
-- No implementa aún stash, creación de merges ni reset desde la interfaz.
-- Los conflictos `.blend` se detectan, pero la resolución guiada y el respaldo de ambas variantes pertenecen a la siguiente fase.
-- Pull usa `--ff-only` para evitar merges automáticos inesperados.
-- Presionar Escape solicita la terminación del proceso externo y mantiene la tarea ocupada hasta confirmar su finalización.
-- El asistente usa modos Stage All, Recommended o None; la selección individual posterior se realiza desde Changes.
-- Abrir un repositorio no abre silenciosamente otro `.blend`.
-- Git y Git LFS no pueden fusionar geometría, materiales o animaciones dentro de un `.blend` binario.
+- Git Graph uses native Blender components; lanes are distinguished by colored nodes and orthogonal connections adapted to the available width.
+- Stash, merge creation, and reset are not yet implemented in the UI.
+- `.blend` conflicts are detected, but guided resolution and backup of both variants belong to the next phase.
+- Pull uses `--ff-only` to prevent unexpected automatic merges.
+- Pressing Escape requests termination of the external process and keeps the task busy until termination is confirmed.
+- The wizard provides Stage All, Recommended, and None modes; individual selection is available later in Changes.
+- Opening a repository does not silently open another `.blend` file.
+- Git and Git LFS cannot merge geometry, materials, or animation inside a binary `.blend` file.
 
-## Próximas fases
+## Next phases
 
-Consulta `docs/ROADMAP.md` para el diseño de stash, merges controlados, conflictos binarios, bloqueo de archivos, proveedores adicionales y colaboración en equipo.
+See `docs/ROADMAP.md` for the plans for stash, controlled merges, binary conflicts, file locking, additional providers, and team collaboration.
 
-## Licencia
+## License
 
 GPL-3.0-or-later.

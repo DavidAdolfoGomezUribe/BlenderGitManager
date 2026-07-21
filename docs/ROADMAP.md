@@ -1,50 +1,50 @@
 # Roadmap
 
-## Entregado en 0.1.8
+## Delivered in 0.1.8
 
-- Corregida la excepción de `UILayout.prop_search` que detenía el dibujo de History.
-- Carriles y conexiones del Git Graph renderizados con colores RGBA por carril.
-- Nodos centrados en la misma fila que el hash, mensaje, autor, fecha y referencias.
-- Vista History compacta para que el gráfico permanezca visible en ventanas bajas.
-- Detalles del commit plegables y gráfico a ancho completo con scroll vertical.
-- Pruebas visuales reales en Blender para merges y `Detached HEAD`.
+- Fixed the `UILayout.prop_search` exception that stopped History from drawing.
+- Rendered Git Graph lanes and connections with per-lane RGBA colors.
+- Centered nodes on the same row as the hash, message, author, date, and references.
+- Made the History view compact so the graph remains visible in short windows.
+- Added collapsible commit details and a full-width graph with vertical scrolling.
+- Added real Blender visual tests for merges and `Detached HEAD`.
 
-## Entregado en 0.1.7
+## Delivered in 0.1.7
 
-- Git Graph visual con carriles, bifurcaciones, merges y referencias.
-- Búsqueda por autor, hash y mensaje, filtro de rama y carga incremental.
-- Historial con archivos modificados y estadísticas por commit.
-- Tags ligeros y anotados desde commits.
-- Creación de ramas desde commits.
-- Revert y checkout de commits con confirmación y recarga segura de la escena.
+- Visual Git Graph with lanes, forks, merges, and references.
+- Search by author, hash, and message; branch filter and incremental loading.
+- History with changed files and per-commit statistics.
+- Lightweight and annotated tags from commits.
+- Branch creation from commits.
+- Revert and checkout of commits with confirmation and safe scene reload.
 
-## Fase 2
+## Phase 2
 
-- CRUD completo de remotos.
-- Stash con mensaje e inclusión de untracked.
-- Indicadores de upstream por rama.
-- Publicación de ramas y tags.
-- Pantalla dedicada para crear repositorios GitHub con README/licencia.
+- Complete remote CRUD.
+- Stash with a message and untracked-file inclusion.
+- Per-branch upstream indicators.
+- Branch and tag publishing.
+- Dedicated screen for creating GitHub repositories with README/license.
 
-## Fase 3
+## Phase 3
 
-- Merge controlado y detección previa de dirty working tree.
-- Conflictos de texto: ours, theirs, resolved y editor externo.
-- Conflictos `.blend`: backup de ambas variantes y selección explícita.
-- Centro persistente de tareas y cancelación de árboles de procesos completos.
-- Progreso LFS mediante parsing de stderr y eventos de transferencia.
+- Controlled merge and prior dirty-working-tree detection.
+- Text conflicts: ours, theirs, resolved, and external editor.
+- `.blend` conflicts: backup of both variants and explicit selection.
+- Persistent task center and cancellation of complete process trees.
+- LFS progress through stderr parsing and transfer events.
 
-## Fase 4
+## Phase 4
 
-- Linux y macOS validados en CI.
-- GitLab CLI/API y Bitbucket.
-- Bloqueo de archivos grandes con proveedor compatible.
-- Extracción y comparación de metadatos de escenas Blender.
-- Pull requests, issues, releases y acciones.
-- Flujos para equipos y convenciones de ramas.
+- Linux and macOS validated in CI.
+- GitLab CLI/API and Bitbucket.
+- Large-file locking through a compatible provider.
+- Extraction and comparison of Blender-scene metadata.
+- Pull requests, issues, releases, and actions.
+- Team workflows and branch conventions.
 
-## Deuda técnica conocida del MVP
+## Known MVP technical debt
 
-- Añadir parser porcelain `-z` para nombres con saltos de línea o secuencias inusuales.
-- Añadir localización inglés/español mediante traducciones de Blender.
-- Persistir preferencias de sesión de forma controlada sin introducir rutas o secretos en `.blend`.
+- Add a porcelain `-z` parser for names containing line breaks or unusual sequences.
+- Add English/Spanish localization through Blender translations.
+- Persist session preferences in a controlled way without placing paths or secrets in `.blend` files.

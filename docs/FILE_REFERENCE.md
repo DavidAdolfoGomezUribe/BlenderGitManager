@@ -1,34 +1,34 @@
-# Referencia de archivos
+# File reference
 
-- `blender_manifest.toml`: declara metadatos, versión mínima, licencia y permisos.
-- `__init__.py`: registra preferencias, propiedades, operadores, UI y timer.
-- `constants.py`: valores compartidos, `.gitignore` y patrones LFS.
-- `preferences.py`: ejecutables y comportamiento configurable.
-- `properties.py`: estado que Blender puede dibujar y serializar durante la sesión.
-- `state_sync.py`: consulta los servicios y reconstruye el estado de UI.
-- `models/domain.py`: contratos entre servicios y operadores.
-- `process_service.py`: ejecución segura, timeout y captura de salida.
-- `git_service.py`: API local de Git.
-- `lfs_service.py`: API de Git LFS.
-- `github_service.py`: autenticación y repositorios GitHub mediante CLI.
-- `repository_service.py`: init, gitignore, commit inicial, remoto y clone.
-- `history_parser.py`: divide registros y campos de `git log`.
-- `status_parser.py`: interpreta códigos XY de porcelain v1.
-- `background_task_service.py`: base para un futuro task center persistente.
-- `credential_service.py`: documenta y refuerza la política de secretos.
-- `operators/base.py`: infraestructura Future + timer modal.
+- `blender_manifest.toml`: declares metadata, minimum version, license, and permissions.
+- `__init__.py`: registers preferences, properties, operators, UI, and the timer.
+- `constants.py`: shared values, `.gitignore`, and LFS patterns.
+- `preferences.py`: executables and configurable behavior.
+- `properties.py`: state Blender can draw and serialize during the session.
+- `state_sync.py`: queries services and rebuilds UI state.
+- `models/domain.py`: contracts between services and operators.
+- `process_service.py`: safe execution, timeout, and output capture.
+- `git_service.py`: local Git API.
+- `lfs_service.py`: Git LFS API.
+- `github_service.py`: GitHub authentication and repositories through the CLI.
+- `repository_service.py`: initialization, gitignore, initial commit, remote, and clone.
+- `history_parser.py`: splits `git log` records and fields.
+- `status_parser.py`: interprets porcelain v1 XY status codes.
+- `background_task_service.py`: foundation for a future persistent task center.
+- `credential_service.py`: documents and enforces the secret policy.
+- `operators/base.py`: Future + modal timer infrastructure.
 - `operators/authentication.py`: login/logout.
-- `operators/repository.py`: onboarding y asistentes.
+- `operators/repository.py`: onboarding and wizards.
 - `operators/staging.py`: stage/unstage/discard.
-- `operators/commits.py`: commit y push opcional.
+- `operators/commits.py`: commit and optional push.
 - `operators/synchronization.py`: fetch/pull/push/sync.
-- `operators/branches.py`: create/switch con backup.
+- `operators/branches.py`: create/switch with backup.
 - `operators/lfs.py`: track/untrack.
-- `ui/dashboard.py`: composición visual reutilizable.
-- `ui/lists.py`: filas de cambios, commits, ramas y logs.
-- `ui/main_panel.py`: panel N de la Vista 3D.
-- `ui/top_menu.py`: menú principal Git.
-- `utils/validation.py`: evita refs y rutas inválidas.
-- `utils/backups.py`: copia de seguridad timestamp.
-- `utils/formatting.py`: tamaños y redacción de secretos.
-- `tests/`: validación de parsers, procesos y repositorios reales temporales.
+- `ui/dashboard.py`: reusable visual composition.
+- `ui/lists.py`: rows for changes, commits, branches, and logs.
+- `ui/main_panel.py`: 3D View N-panel.
+- `ui/top_menu.py`: main Git menu.
+- `utils/validation.py`: prevents invalid refs and paths.
+- `utils/backups.py`: timestamped backup.
+- `utils/formatting.py`: sizes and secret redaction.
+- `tests/`: parser, process, and temporary-real-repository validation.

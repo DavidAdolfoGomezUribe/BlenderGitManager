@@ -1,45 +1,45 @@
-# Prompt para desarrollar un add-on de control de versiones Git y Git LFS para Blender
+# Prompt for developing a Git and Git LFS version-control add-on for Blender
 
-Quiero desarrollar un add-on profesional para Blender que permita gestionar repositorios Git y GitHub directamente desde la interfaz gráfica de Blender, sin que el usuario tenga que escribir comandos manualmente en una terminal.
+I want to develop a professional Blender add-on that manages Git and GitHub repositories directly from Blender's graphical interface, without requiring users to type manual terminal commands.
 
-El add-on debe funcionar como una interfaz visual similar a las herramientas de control de versiones de Visual Studio Code, Visual Studio y extensiones como Git Graph.
+The add-on must provide a visual experience similar to source-control tools in Visual Studio Code, Visual Studio, and extensions such as Git Graph.
 
-El objetivo principal es permitir que artistas 3D, diseñadores y desarrolladores puedan guardar versiones de archivos `.blend`, modelos, texturas, animaciones y otros recursos pesados mediante Git y Git LFS, usando una interfaz intuitiva integrada en Blender.
+Its primary goal is to let 3D artists, designers, and developers version `.blend` files, models, textures, animations, and other large assets through Git and Git LFS in an intuitive Blender-integrated interface.
 
-## 1. Objetivo general
+## 1. General objective
 
-Desarrollar un add-on para Blender escrito en Python que permita:
+Develop a Python add-on for Blender that can:
 
-* Conectar Blender con Git.
-* Conectar Blender con GitHub.
-* Utilizar Git LFS para archivos grandes.
-* Autenticarse en GitHub mediante el navegador.
-* Crear commits sin utilizar la consola.
-* Ejecutar operaciones comunes de Git desde botones y formularios.
-* Visualizar ramas, commits, autores y cambios.
-* Mostrar un gráfico visual del historial Git.
-* Administrar repositorios desde la interfaz de Blender.
-* Inicializar visualmente un repositorio Git nuevo desde la carpeta del archivo `.blend` o desde una carpeta seleccionada, sin utilizar una terminal.
-* Guardar automáticamente el archivo `.blend` antes de crear un commit.
-* Evitar almacenar contraseñas o tokens directamente dentro del add-on.
+- Connect Blender to Git.
+- Connect Blender to GitHub.
+- Use Git LFS for large files.
+- Authenticate with GitHub in a browser.
+- Create commits without using a console.
+- Run common Git operations from buttons and forms.
+- Display branches, commits, authors, and changes.
+- Display a visual Git-history graph.
+- Manage repositories from Blender's interface.
+- Visually initialize a new Git repository from the `.blend` file folder or another selected folder, without a terminal.
+- Automatically save the `.blend` file before creating a commit.
+- Avoid storing passwords or tokens directly in the add-on.
 
-El add-on no debe implementar Git desde cero. Debe utilizar los ejecutables instalados en el sistema:
+The add-on must not implement Git itself. It must use system-installed executables:
 
-* `git`
-* `git-lfs`
-* `gh`, GitHub CLI
+- `git`
+- `git-lfs`
+- `gh` (GitHub CLI)
 
-La comunicación debe realizarse desde Python mediante `subprocess`, usando siempre listas de argumentos y `shell=False`.
+Python communication must use `subprocess`, always pass argument lists, and use `shell=False`.
 
-## 2. Nombre provisional
+## 2. Provisional name
 
-Nombre del add-on:
+Add-on name:
 
 ```text
 Blender Git Manager
 ```
 
-Otros nombres posibles:
+Other possible names:
 
 ```text
 Blend Version Control
@@ -48,26 +48,26 @@ Git Tools for Blender
 Blender Git Graph
 ```
 
-## 3. Compatibilidad
+## 3. Compatibility
 
-El add-on debe diseñarse inicialmente para:
+The add-on must initially target:
 
-* Blender 4.2 o superior.
-* Windows 10 y Windows 11.
-* Git instalado en el sistema.
-* Git LFS instalado.
-* GitHub CLI instalada para autenticación mediante navegador.
+- Blender 4.2 or later.
+- Windows 10 and Windows 11.
+- Git installed on the system.
+- Git LFS installed.
+- GitHub CLI installed for browser authentication.
 
-Posteriormente debe poder ampliarse para:
+It must later be extensible to:
 
-* Linux.
-* macOS.
+- Linux.
+- macOS.
 
-La arquitectura debe evitar rutas absolutas específicas de Windows cuando sea posible.
+The architecture should avoid Windows-specific absolute paths where possible.
 
-## 4. Integración en la interfaz de Blender
+## 4. Blender UI integration
 
-El add-on debe integrarse en la barra superior principal de Blender, donde aparecen menús como:
+The add-on must integrate into Blender's main top bar, alongside menus such as:
 
 ```text
 File
@@ -77,19 +77,19 @@ Window
 Help
 ```
 
-Se debe añadir un nuevo menú:
+It must add a new menu:
 
 ```text
 Git
 ```
 
-Ejemplo:
+Example:
 
 ```text
 File | Edit | Render | Window | Git | Help
 ```
 
-El menú Git debe contener accesos rápidos como:
+The Git menu must provide quick access to:
 
 ```text
 Git
@@ -108,39 +108,29 @@ Git
 └── Settings
 ```
 
-Además del menú superior, el add-on debe incluir una ventana principal o panel amplio para administrar el repositorio.
+In addition to the top menu, the add-on must include a main window or wide panel for repository management. It may initially be a 3D View sidebar panel, popup window, custom area, reused editor, or standalone panel accessible from Git. The priority is a wide, clear, organized interface rather than restricting all functionality to a narrow sidebar.
 
-La ventana puede implementarse inicialmente como:
+## 5. Git Manager main window
 
-* Panel lateral en la Vista 3D.
-* Ventana emergente.
-* Área personalizada.
-* Editor reutilizando un espacio existente.
-* Panel independiente accesible desde el menú Git.
+The main window must be divided into sections.
 
-La prioridad es crear una interfaz amplia, clara y organizada, no limitar toda la funcionalidad a un panel lateral estrecho.
+### Repository header
 
-## 5. Ventana principal Git Manager
+It must display:
 
-La ventana principal debe estar dividida en secciones.
+- Repository name.
+- Local path.
+- Remote URL.
+- Remote provider, initially GitHub.
+- Active branch.
+- Synchronization status.
+- Latest commit.
+- Latest commit author.
+- GitHub connection indicator.
+- Git LFS indicator.
+- Modified-files indicator.
 
-### Encabezado del repositorio
-
-Debe mostrar:
-
-* Nombre del repositorio.
-* Ruta local.
-* URL remota.
-* Proveedor remoto, inicialmente GitHub.
-* Rama activa.
-* Estado de sincronización.
-* Último commit.
-* Autor del último commit.
-* Indicador de conexión con GitHub.
-* Indicador de Git LFS.
-* Indicador de archivos modificados.
-
-Ejemplo:
+Example:
 
 ```text
 Repository: TankGameAssets
@@ -151,7 +141,7 @@ Git LFS: Active
 GitHub: Authenticated
 ```
 
-Debe incluir botones:
+It must include these buttons:
 
 ```text
 Refresh
@@ -160,7 +150,7 @@ Open on GitHub
 Settings
 ```
 
-Cuando el archivo `.blend` actual no pertenezca a un repositorio Git, la ventana no debe aparecer vacía ni limitarse a mostrar un error. Debe mostrar una pantalla inicial de incorporación:
+When the current `.blend` file is not inside a Git repository, the window must not be empty or show only an error. It must show an onboarding screen:
 
 ```text
 No Git repository detected
@@ -170,69 +160,64 @@ No Git repository detected
 [Clone from GitHub]
 ```
 
-La acción principal debe ser **Initialize Repository**, porque es el punto de entrada necesario para comenzar a preparar archivos y crear commits.
+The main action must be **Initialize Repository**, because it is the required entry point for preparing files and creating commits.
 
-## 6. Autenticación con GitHub mediante navegador
+## 6. GitHub browser authentication
 
-La autenticación debe realizarse usando GitHub CLI.
+Authentication must use GitHub CLI.
 
-El add-on debe comprobar si `gh` está instalado ejecutando:
+The add-on must check that `gh` is installed by running:
 
 ```bash
 gh --version
 ```
 
-Debe comprobar el estado de autenticación con:
+It must check authentication status with:
 
 ```bash
 gh auth status
 ```
 
-Cuando el usuario presione:
+When the user selects:
 
 ```text
 Connect to GitHub
 ```
 
-el add-on debe ejecutar:
+the add-on must run:
 
 ```bash
 gh auth login --web
 ```
 
-El proceso debe:
+The process must:
 
-1. Abrir el navegador.
-2. Permitir que el usuario inicie sesión en GitHub.
-3. Autorizar GitHub CLI.
-4. Volver a Blender.
-5. Verificar automáticamente el estado de autenticación.
-6. Mostrar el nombre del usuario conectado.
+1. Open the browser.
+2. Let the user sign in to GitHub.
+3. Authorize GitHub CLI.
+4. Return to Blender.
+5. Automatically verify authentication status.
+6. Show the connected user name.
 
-No se deben pedir ni guardar:
+The add-on must not request or store passwords, personal access tokens, private keys, or plaintext credentials.
 
-* Contraseñas.
-* Tokens de acceso personal.
-* Claves privadas.
-* Credenciales en texto plano.
-
-Debe existir también una opción:
+It must also include:
 
 ```text
 Disconnect GitHub
 ```
 
-que utilice:
+which runs:
 
 ```bash
 gh auth logout
 ```
 
-Antes de cerrar la sesión debe mostrarse una confirmación visual.
+A visual confirmation must be shown before logging out.
 
-## 7. Detección de dependencias
+## 7. Dependency detection
 
-Al iniciar el add-on debe comprobar:
+On startup, the add-on must check:
 
 ```bash
 git --version
@@ -240,7 +225,7 @@ git lfs version
 gh --version
 ```
 
-Debe mostrar una sección de estado:
+It must display a status section:
 
 ```text
 Git: Installed
@@ -248,28 +233,28 @@ Git LFS: Installed
 GitHub CLI: Installed
 ```
 
-Si falta alguna dependencia debe indicar:
+When a dependency is missing, it must explain:
 
-* Qué programa falta.
-* Para qué se necesita.
-* Cómo instalarlo.
-* Botón para abrir la página oficial de instalación.
+- Which program is missing.
+- Why it is required.
+- How to install it.
+- A button that opens the official installation page.
 
-El add-on no debe fallar completamente si falta GitHub CLI. Las funciones locales de Git deben seguir disponibles cuando Git y Git LFS estén instalados.
+The add-on must not fail completely when GitHub CLI is missing. Local Git functions must remain available whenever Git and Git LFS are installed.
 
-## 8. Inicialización, apertura y clonación de repositorios
+## 8. Initializing, opening, and cloning repositories
 
-La inicialización de un repositorio es una funcionalidad primordial del add-on y debe formar parte del flujo principal del MVP. El usuario debe poder convertir la carpeta de su proyecto Blender en un repositorio Git completamente funcional sin abrir una terminal.
+Repository initialization is a primary feature and must be part of the main MVP flow. Users must be able to turn their Blender-project folder into a fully functional Git repository without opening a terminal.
 
-Antes de mostrar las acciones de control de versiones, el add-on debe detectar si el archivo `.blend` actual ya se encuentra dentro de un repositorio mediante:
+Before version-control actions are displayed, the add-on must detect whether the current `.blend` file already belongs to a repository with:
 
 ```bash
 git rev-parse --show-toplevel
 ```
 
-También puede comprobar directamente la existencia de una carpeta `.git`, pero `git rev-parse` debe considerarse la fuente principal para detectar la raíz real del repositorio.
+It may also check for a `.git` folder directly, but `git rev-parse` must be the main source for detecting the real repository root.
 
-La ventana principal debe presentar tres acciones cuando no se detecte un repositorio:
+When no repository is detected, the main window must offer:
 
 ```text
 Initialize Repository
@@ -277,17 +262,17 @@ Open Existing Repository
 Clone Repository
 ```
 
-### 8.1 Inicializar un repositorio local
+### 8.1 Initialize a local repository
 
-Debe existir un botón principal:
+There must be a primary button:
 
 ```text
 Initialize Repository
 ```
 
-Este botón debe abrir un asistente visual, no ejecutar inmediatamente `git init` sin mostrar opciones.
+It must open a visual wizard rather than immediately running `git init` without options.
 
-El asistente debe incluir como mínimo:
+The wizard must include at least:
 
 ```text
 Repository folder:
@@ -327,29 +312,27 @@ Connect to GitHub after initialization:
 [Enabled / Disabled]
 ```
 
-#### Selección de la carpeta
+#### Folder selection
 
-Por defecto, si el archivo actual ya fue guardado, debe proponerse como raíz del repositorio:
+By default, if the current file is already saved, the proposed repository root must be:
 
 ```python
 Path(bpy.data.filepath).parent
 ```
 
-Si el archivo `.blend` todavía no ha sido guardado, el add-on debe solicitar una carpeta y ofrecer guardar el archivo dentro de ella antes de continuar.
+If the `.blend` file has not been saved yet, the add-on must ask for a folder and offer to save the file there before continuing. Users must also be able to choose another folder through Blender's file selector.
 
-El usuario también debe poder seleccionar una carpeta diferente mediante el selector de archivos de Blender.
+The add-on must validate:
 
-El add-on debe validar:
+- The path exists or can be created.
+- The user has write permission.
+- Initialization is not accidentally occurring inside another repository.
+- A `.git` folder does not already exist without the user's knowledge.
+- The selected folder is not a Blender temporary-recovery path.
+- The branch name is valid.
+- Author name and email are configured before the first commit.
 
-* Que la ruta exista o pueda crearse.
-* Que el usuario tenga permisos de escritura.
-* Que no se esté intentando inicializar accidentalmente dentro de otro repositorio.
-* Que no exista ya una carpeta `.git` sin que el usuario lo sepa.
-* Que la carpeta seleccionada no sea una ruta temporal de recuperación de Blender.
-* Que el nombre de la rama sea válido.
-* Que el nombre y correo del autor estén configurados antes del primer commit.
-
-Si ya existe un repositorio, debe mostrarse:
+If a repository already exists, it must show:
 
 ```text
 A Git repository already exists in this folder.
@@ -359,30 +342,28 @@ A Git repository already exists in this folder.
 [Cancel]
 ```
 
-No se debe volver a inicializar silenciosamente.
+It must not silently initialize again.
 
-#### Comando de inicialización
+#### Initialization command
 
-La opción preferida debe ser:
+The preferred command is:
 
 ```bash
 git init -b main
 ```
 
-donde `main` corresponde al nombre de rama elegido por el usuario.
-
-Para versiones antiguas de Git que no soporten `-b`, debe existir un fallback:
+where `main` is the branch name selected by the user. For older Git versions that do not support `-b`, a fallback is required:
 
 ```bash
 git init
 git branch -M main
 ```
 
-El resultado debe verificarse antes de continuar con los siguientes pasos.
+The result must be verified before continuing.
 
-#### Configuración de identidad Git
+#### Git identity configuration
 
-El asistente debe leer primero:
+The wizard must first read:
 
 ```bash
 git config user.name
@@ -391,26 +372,24 @@ git config --global user.name
 git config --global user.email
 ```
 
-Si no hay una identidad local válida, debe permitir configurarla visualmente.
-
-Para el repositorio actual:
+If there is no valid local identity, it must allow visual configuration. For the current repository:
 
 ```bash
-git config user.name "Nombre"
-git config user.email "correo@example.com"
+git config user.name "Name"
+git config user.email "email@example.com"
 ```
 
-La configuración global solo debe modificarse cuando el usuario seleccione explícitamente:
+Global configuration may only be modified after the user explicitly selects:
 
 ```text
 Apply identity globally
 ```
 
-#### Creación de `.gitignore`
+#### `.gitignore` creation
 
-El asistente debe poder generar automáticamente un `.gitignore` recomendado para Blender.
+The wizard must generate a recommended Blender `.gitignore`.
 
-Contenido base sugerido:
+Suggested base content:
 
 ```gitignore
 # Blender automatic backups
@@ -439,23 +418,17 @@ Thumbs.db
 credentials.json
 ```
 
-El usuario debe poder:
+Users must be able to preview the content, enable or disable rules, add custom patterns, choose whether `.blend1`, `.blend2`, and `.blend3` are ignored or managed through Git LFS, and avoid overwriting an existing `.gitignore` without confirmation.
 
-* Previsualizar el contenido.
-* Activar o desactivar reglas.
-* Agregar patrones personalizados.
-* Elegir si los archivos `.blend1`, `.blend2` y `.blend3` se ignoran o se gestionan mediante Git LFS.
-* Evitar sobrescribir un `.gitignore` existente sin confirmación.
+#### Initial Git LFS setup
 
-#### Configuración inicial de Git LFS
-
-Cuando Git LFS esté activado, la inicialización local del repositorio debe ejecutar:
+When Git LFS is enabled, local initialization must run:
 
 ```bash
 git lfs install --local
 ```
 
-Después debe aplicar los patrones seleccionados, por ejemplo:
+It must then apply selected patterns, for example:
 
 ```bash
 git lfs track "*.blend"
@@ -464,19 +437,17 @@ git lfs track "*.glb"
 git lfs track "*.psd"
 ```
 
-Debe verificarse que `.gitattributes` haya sido creado o actualizado.
+It must verify that `.gitattributes` was created or updated. The wizard must clearly show the files that will be managed by Git LFS before staging the first commit.
 
-El asistente debe mostrar claramente qué archivos serán manejados por Git LFS antes de preparar el primer commit.
+#### Saving the Blender file
 
-#### Guardar el archivo Blender
-
-Si la opción está habilitada, el add-on debe guardar el archivo antes del primer commit:
+When enabled, the add-on must save the file before the first commit:
 
 ```python
 bpy.ops.wm.save_as_mainfile(filepath=bpy.data.filepath)
 ```
 
-Cuando el archivo todavía no exista dentro de la carpeta del repositorio, debe permitir:
+When the file is not yet inside the repository folder, it must offer:
 
 ```text
 Save a copy inside repository
@@ -484,13 +455,11 @@ Move project file into repository
 Cancel
 ```
 
-No se debe mover ni sobrescribir un archivo sin confirmación explícita.
+No file may be moved or overwritten without explicit confirmation.
 
-#### Primer stage y primer commit
+#### Initial staging and first commit
 
-Después de inicializar el repositorio, el asistente debe mostrar los archivos detectados y permitir seleccionar cuáles formarán parte del primer commit.
-
-Opciones:
+After initialization, the wizard must show detected files and let users choose what goes into the first commit.
 
 ```text
 Stage Selected Files
@@ -499,16 +468,16 @@ Stage All
 Skip Initial Commit
 ```
 
-Comandos posibles:
+Possible commands:
 
 ```bash
-git add archivo
+git add file
 git add .gitignore
 git add .gitattributes
 git add .
 ```
 
-Antes del primer commit debe mostrarse un resumen:
+Before the first commit, show a summary:
 
 ```text
 Repository folder: C:/Projects/TankAssets
@@ -519,13 +488,13 @@ Files to commit: 8
 Commit message: Initial commit
 ```
 
-El primer commit debe ejecutarse visualmente mediante:
+The first commit must run visibly through:
 
 ```bash
 git commit -m "Initial commit"
 ```
 
-El mensaje debe ser editable y no se debe crear un commit vacío accidentalmente. Si no hay archivos preparados, debe advertirse al usuario y ofrecer:
+The message must be editable and an empty commit must not be created accidentally. If no files are staged, warn the user and offer:
 
 ```text
 Select Files
@@ -533,11 +502,9 @@ Create Repository Without Commit
 Cancel
 ```
 
-#### Conectar el repositorio local con GitHub
+#### Connecting the local repository to GitHub
 
-La inicialización local debe funcionar aunque el usuario no esté autenticado en GitHub.
-
-Después de crear el repositorio local, el usuario debe poder elegir una de estas opciones:
+Local initialization must work even when the user is not authenticated with GitHub. After creation, users must be able to choose:
 
 ```text
 Keep Local Only
@@ -545,20 +512,20 @@ Connect Existing GitHub Repository
 Create New GitHub Repository
 ```
 
-Para conectar un repositorio remoto existente:
+To connect an existing remote repository:
 
 ```bash
 git remote add origin https://github.com/OWNER/REPOSITORY.git
 git push -u origin main
 ```
 
-Para crear un repositorio nuevo con GitHub CLI y autenticación por navegador:
+To create a new repository through GitHub CLI and browser authentication:
 
 ```bash
 gh repo create REPOSITORY_NAME --source=. --remote=origin --push
 ```
 
-El formulario de creación debe permitir:
+The creation form must allow:
 
 ```text
 Repository name
@@ -569,29 +536,29 @@ Remote name: origin
 Push initial branch after creation
 ```
 
-Antes de usar `gh repo create`, debe verificarse:
+Before `gh repo create`, check:
 
 ```bash
 gh auth status
 ```
 
-Si el usuario todavía no está autenticado, debe mostrarse el botón:
+If the user is not authenticated, show:
 
 ```text
 Connect to GitHub in Browser
 ```
 
-que ejecutará:
+which runs:
 
 ```bash
 gh auth login --web
 ```
 
-El repositorio local debe permanecer funcional incluso si la autenticación o la creación remota fallan.
+The local repository must remain functional even when authentication or remote creation fails.
 
-#### Flujo completo de inicialización
+#### Complete initialization flow
 
-El asistente debe seguir este orden:
+The wizard must follow this order:
 
 ```text
 1. Select repository folder
@@ -611,7 +578,7 @@ El asistente debe seguir este orden:
 15. Refresh repository status and open Git Manager
 ```
 
-Cada paso debe mostrar su estado:
+Each step must show one of these states:
 
 ```text
 Pending
@@ -621,7 +588,7 @@ Failed
 Skipped
 ```
 
-Si un paso falla, el asistente debe detener las acciones dependientes, conservar el repositorio local ya creado cuando sea seguro y ofrecer:
+If a step fails, the wizard must stop dependent actions, preserve the safely created local repository, and offer:
 
 ```text
 Retry Step
@@ -630,9 +597,9 @@ Continue Without GitHub
 Cancel
 ```
 
-#### Resultado visual al finalizar
+#### Completion result
 
-Al completar la inicialización, el add-on debe mostrar:
+At the end of initialization, display:
 
 ```text
 Repository initialized successfully
@@ -650,35 +617,25 @@ GitHub: Connected
 [Open on GitHub]
 ```
 
-### 8.2 Abrir un repositorio existente
+### 8.2 Open an existing repository
 
-Debe existir una opción:
+Provide:
 
 ```text
 Open Existing Repository
 ```
 
-El usuario debe seleccionar cualquier carpeta dentro del repositorio. El add-on debe localizar la raíz mediante:
+The user may select any folder inside a repository. The add-on must locate the root through:
 
 ```bash
 git rev-parse --show-toplevel
 ```
 
-Debe validar el repositorio y mostrar:
+It must validate the repository and display its root path, current branch, remotes, status, latest commit, Git LFS configuration, and whether the current `.blend` file belongs to it. Opening a repository must not silently change the `.blend` file; the association between the selected repository and the Blender session must be visible and editable.
 
-* Ruta raíz.
-* Rama actual.
-* Remotos.
-* Estado.
-* Último commit.
-* Configuración de Git LFS.
-* Si el archivo `.blend` actual pertenece o no al repositorio.
+### 8.3 Clone a repository
 
-Abrir un repositorio desde el add-on no significa cambiar silenciosamente el archivo `.blend`. La asociación entre el repositorio seleccionado y la sesión de Blender debe ser visible y editable.
-
-### 8.3 Clonar un repositorio
-
-Debe existir un formulario:
+Provide this form:
 
 ```text
 Repository URL or owner/repository:
@@ -689,42 +646,32 @@ Open project after clone:
 [Clone]
 ```
 
-Debe soportar:
+It must support HTTPS URLs, SSH URLs, `owner/repository` when GitHub CLI is available, public repositories, and private repositories with valid authentication.
 
-* URL HTTPS.
-* URL SSH.
-* Formato `owner/repository` cuando GitHub CLI esté disponible.
-* Repositorios públicos.
-* Repositorios privados cuando exista autenticación válida.
-
-Comandos:
+Commands:
 
 ```bash
 git clone URL DESTINATION
 ```
 
-o:
+or:
 
 ```bash
 gh repo clone owner/repository DESTINATION
 ```
 
-Después de clonar debe ejecutar o verificar:
+After cloning, it must run or verify:
 
 ```bash
 git lfs install --local
 git lfs pull
 ```
 
-solo cuando el repositorio use Git LFS.
+only when the repository uses Git LFS. Cloning and LFS download must run as controlled tasks so they do not block Blender. After completion, display the found `.blend` files and let the user choose which one to open.
 
-La clonación y la descarga de objetos LFS deben ejecutarse como tareas controladas para evitar bloquear la interfaz de Blender.
+### 8.4 Minimum required operators
 
-Al finalizar, debe mostrar los archivos `.blend` encontrados y permitir que el usuario elija cuál abrir.
-
-### 8.4 Operadores mínimos requeridos
-
-La implementación debe incluir, como mínimo, operadores equivalentes a:
+The implementation must include at least operators equivalent to:
 
 ```text
 git_manager.initialize_repository
@@ -735,7 +682,7 @@ git_manager.connect_remote
 git_manager.create_github_repository
 ```
 
-La lógica de negocio no debe estar incrustada completamente dentro de los operadores. Debe delegarse a servicios reutilizables como:
+Business logic must not live entirely inside operators. It must delegate to reusable services such as:
 
 ```text
 RepositoryService
@@ -743,26 +690,25 @@ GitService
 LFSService
 GitHubService
 ```
+
 ## 9. Git LFS
 
-Git LFS debe ser una función central del add-on.
+Git LFS must be a core add-on feature.
 
-El add-on debe comprobar si Git LFS está activo:
+The add-on must check whether Git LFS is active:
 
 ```bash
 git lfs version
 git lfs env
 ```
 
-Debe permitir inicializarlo mediante:
+It must initialize it with:
 
 ```bash
 git lfs install
 ```
 
-Debe incluir una interfaz para seleccionar qué extensiones serán gestionadas mediante LFS.
-
-Configuración inicial recomendada:
+It must provide a UI for choosing extensions managed through LFS. Recommended initial patterns are:
 
 ```text
 *.blend
@@ -790,9 +736,7 @@ Configuración inicial recomendada:
 *.mov
 ```
 
-No todas deben activarse obligatoriamente. El usuario debe poder seleccionar cuáles quiere rastrear.
-
-Debe permitir agregar patrones personalizados:
+Not all patterns must be enabled. Users must choose which ones to track and may add custom patterns such as:
 
 ```text
 *.sbsar
@@ -800,47 +744,30 @@ Debe permitir agregar patrones personalizados:
 *.customformat
 ```
 
-La interfaz debe ejecutar:
+The UI must run:
 
 ```bash
 git lfs track "*.blend"
-```
-
-También debe poder ejecutar:
-
-```bash
 git lfs untrack "*.blend"
 ```
 
-Debe mostrar el contenido de `.gitattributes`.
-
-Debe recordar al usuario que `.gitattributes` debe incluirse en el commit.
-
-Debe mostrar qué archivos están actualmente administrados por Git LFS:
+It must show `.gitattributes`, remind users to commit it, and display LFS-managed files with:
 
 ```bash
 git lfs ls-files
 ```
 
-Debe mostrar:
+For each file show its name, size, LFS pattern, status, and whether it is pending upload.
 
-* Nombre del archivo.
-* Tamaño.
-* Patrón LFS.
-* Estado.
-* Si está pendiente de subir.
+## 10. Repository status
 
-## 10. Estado del repositorio
-
-Debe existir una sección equivalente a Source Control.
-
-Debe ejecutar:
+Provide a Source Control-like section that runs:
 
 ```bash
 git status --short
 ```
 
-La interfaz debe clasificar los archivos en:
+It must classify files as:
 
 ```text
 Staged Changes
@@ -850,16 +777,7 @@ Conflicts
 Ignored Files
 ```
 
-Cada archivo debe mostrar:
-
-* Nombre.
-* Ruta relativa.
-* Estado.
-* Tamaño.
-* Si utiliza Git LFS.
-* Tipo de cambio.
-
-Estados visuales:
+Each file must show name, relative path, status, size, whether it uses Git LFS, and change type. Visual states include:
 
 ```text
 M = Modified
@@ -870,19 +788,17 @@ R = Renamed
 UU = Conflict
 ```
 
-Los archivos deben poder seleccionarse individualmente.
+Files must be individually selectable.
 
-## 11. Git add visual
+## 11. Visual Git add
 
-El usuario no debe escribir:
+Users must not need to type:
 
 ```bash
 git add .
 ```
 
-Debe haber controles visuales.
-
-Opciones:
+Provide visual controls:
 
 ```text
 Stage Selected
@@ -894,88 +810,77 @@ Unstage All
 Discard Changes
 ```
 
-Comandos correspondientes:
+Corresponding commands:
 
 ```bash
-git add archivo
+git add file
 git add .
-git restore --staged archivo
+git restore --staged file
 git reset
-git restore archivo
+git restore file
 ```
 
-Antes de descartar cambios debe mostrarse una confirmación clara, porque es una acción destructiva.
-
-Debe existir una casilla:
+Discarding changes must have a clear confirmation because it is destructive. Include:
 
 ```text
 Include current .blend file
 ```
 
-También debe mostrarse si el archivo `.blend` actual tiene cambios sin guardar.
+and indicate when the current `.blend` has unsaved changes.
 
-## 12. Creación intuitiva de commits
+## 12. Intuitive commit creation
 
-La creación de commits debe realizarse mediante una interfaz visual.
-
-Debe incluir:
+Commits must be created through a visual UI:
 
 ```text
 Commit message:
-[Campo de texto]
+[Text field]
 
 Extended description:
-[Área de texto opcional]
+[Optional text area]
 
 Author:
-Nombre <correo>
+Name <email>
 
 Staged files:
-Lista de archivos
+File list
 
 [Save Blender File Before Commit]
 [Commit]
 [Commit and Push]
 ```
 
-El usuario nunca debe necesitar escribir manualmente:
+Users must never need to manually type:
 
 ```bash
-git commit -m "mensaje"
+git commit -m "message"
 ```
 
-El add-on debe ejecutar internamente:
+Internally, the add-on must run:
 
 ```bash
-git commit -m "mensaje"
+git commit -m "message"
 ```
 
-Para una descripción extendida puede utilizar:
+For extended descriptions it may use:
 
 ```bash
-git commit -m "Título" -m "Descripción"
+git commit -m "Title" -m "Description"
 ```
 
-Validaciones:
+Validation must prevent a missing message, warn when there are no staged files or unsaved `.blend` changes, present Git errors clearly, detect when there is nothing to commit, and confirm successful completion.
 
-* No permitir un commit sin mensaje.
-* Advertir si no existen archivos preparados.
-* Advertir si el archivo `.blend` tiene cambios sin guardar.
-* Mostrar errores de Git de forma clara.
-* Detectar cuando no hay nada para confirmar.
-* Mostrar confirmación al completar el commit.
-
-Antes del commit debe poder ejecutarse:
+Before committing it may run:
 
 ```python
 bpy.ops.wm.save_as_mainfile(filepath=bpy.data.filepath)
 ```
 
-Debe existir una preferencia para activar o desactivar el guardado automático.
+There must be a preference to enable or disable automatic saving.
 
-## 13. Push, pull y fetch
+## 13. Push, pull, and fetch
 
-Botones principales:
+Provide primary buttons:
 
 ```text
 Fetch
@@ -984,7 +889,7 @@ Push
 Sync
 ```
 
-Comandos:
+Commands:
 
 ```bash
 git fetch
@@ -992,7 +897,7 @@ git pull
 git push
 ```
 
-La función `Sync` debe ejecutar una secuencia segura:
+`Sync` must run this safe sequence:
 
 ```text
 Fetch
@@ -1000,15 +905,7 @@ Pull
 Push
 ```
 
-Debe mostrar:
-
-* Rama local.
-* Rama remota.
-* Commits por delante.
-* Commits por detrás.
-* Estado de sincronización.
-
-Ejemplo:
+Display local branch, remote branch, commits ahead, commits behind, and synchronization state. Example:
 
 ```text
 main
@@ -1016,15 +913,11 @@ main
 1 commit behind
 ```
 
-Debe evitar realizar `push --force` desde la interfaz principal.
+The main interface must avoid `push --force`. An advanced force-push option may only be available in advanced settings with warnings and mandatory confirmation.
 
-Una opción avanzada de force push solo puede estar disponible en configuraciones avanzadas, con advertencias y confirmación obligatoria.
+## 14. Branch management
 
-## 14. Gestión de ramas
-
-Debe existir una sección Branches.
-
-Debe ejecutar:
+Provide a Branches section that runs:
 
 ```bash
 git branch
@@ -1032,17 +925,9 @@ git branch --all
 git branch --show-current
 ```
 
-Debe mostrar:
+Display current branch, local branches, remote branches, latest commit per branch, author, date, and relationship to the current branch.
 
-* Rama actual.
-* Ramas locales.
-* Ramas remotas.
-* Último commit por rama.
-* Autor.
-* Fecha.
-* Relación con la rama actual.
-
-Acciones visuales:
+Visual actions:
 
 ```text
 Create Branch
@@ -1054,20 +939,18 @@ Publish Branch
 Set Upstream
 ```
 
-Comandos:
+Commands:
 
 ```bash
-git switch nombre
-git switch -c nombre
-git branch -m nuevo_nombre
-git branch -d nombre
-git merge nombre
-git push -u origin nombre
+git switch name
+git switch -c name
+git branch -m new_name
+git branch -d name
+git merge name
+git push -u origin name
 ```
 
-Antes de cambiar de rama se debe comprobar si existen cambios sin guardar.
-
-Opciones cuando existan cambios:
+Before switching, check for unsaved changes. When changes exist, offer:
 
 ```text
 Commit Changes
@@ -1076,39 +959,23 @@ Discard Changes
 Cancel
 ```
 
-## 15. Visualización del historial
+## 15. History visualization
 
-Debe existir una sección visual inspirada en Git Graph.
-
-Debe utilizar comandos como:
+Provide a Git Graph-inspired visual section. It may use:
 
 ```bash
 git log --graph --decorate --oneline --all
 ```
 
-Para obtener información estructurada debe preferirse un formato personalizado, por ejemplo:
+For structured data, prefer a custom format such as:
 
 ```bash
 git log --all --date=iso --pretty=format:"%H%x1f%P%x1f%an%x1f%ae%x1f%ad%x1f%D%x1f%s%x1e"
 ```
 
-Cada commit debe mostrar:
+Every commit must show its short and complete hash, message, author name and email, date, branch, tags, parent commits, whether it is a merge commit, and local/remote-branch indicators.
 
-* Hash corto.
-* Hash completo.
-* Mensaje.
-* Autor.
-* Correo del autor.
-* Fecha.
-* Rama.
-* Tags.
-* Commits padres.
-* Si es un merge commit.
-* Indicadores de rama local y remota.
-
-La interfaz debe representar visualmente las conexiones entre commits y ramas.
-
-Ejemplo conceptual:
+The UI must visually represent commit and branch connections. Conceptual example:
 
 ```text
 ● 4d12ab3 main origin/main Fix tank track animation
@@ -1120,52 +987,28 @@ Ejemplo conceptual:
 ● 82ac911 Initial commit
 ```
 
-La visualización debe incluir:
+The visualization must include colored lines per branch, a node for every commit, merge indicators, vertical scrolling, branch filter, message/author/hash search, a refresh button, and commit selection. Selecting a commit must open a details panel.
 
-* Líneas de colores por rama.
-* Nodos para cada commit.
-* Indicadores de merge.
-* Scroll vertical.
-* Filtro por rama.
-* Búsqueda por mensaje, autor o hash.
-* Botón para actualizar.
-* Posibilidad de seleccionar un commit.
+## 16. Commit details
 
-Al seleccionar un commit debe abrirse un panel de detalles.
+Selecting a commit must show hash, message, description, author, email, date, parents, associated branches, tags, changed files, change type, and line statistics for text files.
 
-## 16. Detalles de un commit
-
-Al seleccionar un commit se debe mostrar:
-
-* Hash.
-* Mensaje.
-* Descripción.
-* Autor.
-* Correo.
-* Fecha.
-* Padres.
-* Ramas asociadas.
-* Tags.
-* Lista de archivos modificados.
-* Tipo de cambio.
-* Estadísticas de líneas cuando sean archivos de texto.
-
-Comandos posibles:
+Possible commands:
 
 ```bash
 git show --stat HASH
 git show --name-status HASH
 ```
 
-Para archivos binarios como `.blend`, debe indicarse:
+For binary files such as `.blend`, show:
 
 ```text
 Binary file changed
 ```
 
-No se debe intentar mostrar diferencias internas de geometría dentro de un `.blend`.
+Do not attempt to show internal geometry differences inside a `.blend` file.
 
-Acciones:
+Actions:
 
 ```text
 Copy Commit Hash
@@ -1176,32 +1019,32 @@ Revert Commit
 Open Commit on GitHub
 ```
 
-Acciones destructivas o que cambien el estado deben requerir confirmación.
+Destructive or state-changing actions must require confirmation.
 
-## 17. Autor y configuración de Git
+## 17. Git author and configuration
 
-Debe mostrar la identidad Git actual:
+Show the current Git identity:
 
 ```bash
 git config user.name
 git config user.email
 ```
 
-Debe permitir configurar:
+Allow configuration of:
 
 ```text
 User name
 User email
 ```
 
-Opciones:
+Options:
 
 ```text
 Apply to Current Repository
 Apply Globally
 ```
 
-Comandos:
+Commands:
 
 ```bash
 git config user.name "Name"
@@ -1211,17 +1054,17 @@ git config --global user.name "Name"
 git config --global user.email "email@example.com"
 ```
 
-Debe mostrar claramente si la configuración es local o global.
+Clearly indicate whether the configuration is local or global.
 
-## 18. Repositorios remotos
+## 18. Remote repositories
 
-Debe mostrar:
+Show:
 
 ```bash
 git remote -v
 ```
 
-La interfaz debe permitir:
+The UI must allow:
 
 ```text
 Add Remote
@@ -1231,7 +1074,7 @@ Set Default Remote
 Open Remote in Browser
 ```
 
-Comandos:
+Commands:
 
 ```bash
 git remote add origin URL
@@ -1239,26 +1082,13 @@ git remote set-url origin URL
 git remote remove origin
 ```
 
-Debe detectar si el remoto es de GitHub.
+Detect GitHub remotes. When the remote is GitHub, allow opening the repository, issues, pull requests, actions, commit, and branch in the browser.
 
-Cuando sea GitHub, debe permitir abrir:
+## 19. GitHub repository creation
 
-```text
-Repository
-Issues
-Pull Requests
-Actions
-Commit
-Branch
-```
+When authenticated through GitHub CLI, the add-on must create remote repositories.
 
-en el navegador.
-
-## 19. Creación de repositorios en GitHub
-
-Cuando el usuario esté autenticado mediante GitHub CLI, el add-on debe permitir crear un repositorio remoto.
-
-Formulario:
+Form:
 
 ```text
 Repository Name
@@ -1270,21 +1100,17 @@ Add license
 Create and Push
 ```
 
-Debe utilizar GitHub CLI, por ejemplo:
+Use GitHub CLI, for example:
 
 ```bash
 gh repo create
 ```
 
-Debe permitir conectar el repositorio local y subir el primer commit.
-
-No se deben incluir credenciales en la URL remota.
+It must connect the local repository and push the first commit. Credentials must not be embedded in the remote URL.
 
 ## 20. Stash
 
-Debe existir una sección para Git Stash.
-
-Acciones:
+Provide a Git Stash section with:
 
 ```text
 Create Stash
@@ -1297,22 +1123,22 @@ Drop Stash
 Clear Stashes
 ```
 
-Comandos:
+Commands:
 
 ```bash
-git stash push -m "mensaje"
-git stash push -u -m "mensaje"
+git stash push -m "message"
+git stash push -u -m "message"
 git stash list
 git stash apply
 git stash pop
 git stash drop
 ```
 
-Las acciones `drop` y `clear` deben requerir confirmación.
+`drop` and `clear` must require confirmation.
 
 ## 21. Tags
 
-Debe permitir:
+Allow:
 
 ```text
 Create Tag
@@ -1322,35 +1148,27 @@ Push Tag
 Push All Tags
 ```
 
-Debe mostrar:
+Display each tag's name, commit, message, date, and author.
 
-* Nombre.
-* Commit.
-* Mensaje.
-* Fecha.
-* Autor.
-
-Comandos:
+Commands:
 
 ```bash
 git tag
-git tag nombre
-git tag -a nombre -m "mensaje"
-git push origin nombre
+git tag name
+git tag -a name -m "message"
+git push origin name
 git push origin --tags
 ```
 
-## 22. Conflictos
+## 22. Conflicts
 
-El add-on debe detectar archivos en conflicto.
-
-Debe mostrar una sección especial:
+Detect conflicted files and show a dedicated section:
 
 ```text
 Merge Conflicts
 ```
 
-Para archivos de texto puede permitir:
+For text files, it may provide:
 
 ```text
 Use Ours
@@ -1359,14 +1177,14 @@ Mark as Resolved
 Open Externally
 ```
 
-Para archivos `.blend` debe advertir:
+For `.blend` files, warn:
 
 ```text
-Los archivos .blend son binarios y no pueden fusionarse automáticamente.
-Debes elegir una versión o recuperar manualmente el contenido.
+.blend files are binary and cannot be merged automatically.
+Choose one version or recover content manually.
 ```
 
-Opciones:
+Options:
 
 ```text
 Keep Local Version
@@ -1375,51 +1193,51 @@ Create Backup of Both
 Cancel Merge
 ```
 
-Antes de sobrescribir un `.blend`, debe crear una copia de seguridad.
+Before overwriting a `.blend`, create a backup.
 
-## 23. Archivos `.blend` y seguridad
+## 23. `.blend` files and safety
 
-El add-on debe detectar el archivo abierto mediante:
+Detect the open file through:
 
 ```python
 bpy.data.filepath
 ```
 
-Si el archivo no ha sido guardado, debe mostrar:
+If it has not been saved, show:
 
 ```text
 Save the Blender file before using version control.
 ```
 
-Antes de operaciones importantes debe permitir crear copias de seguridad:
+Before important operations, provide timestamped backups:
 
 ```text
 project_backup_YYYYMMDD_HHMMSS.blend
 ```
 
-Las siguientes operaciones deben ofrecer respaldo:
+These operations must offer a backup:
 
-* Cambio de rama.
-* Checkout de commit.
-* Pull con cambios.
-* Resolución de conflictos.
-* Revert.
-* Reset.
-* Restauración de archivos.
+- Branch switch.
+- Commit checkout.
+- Pull with changes.
+- Conflict resolution.
+- Revert.
+- Reset.
+- File restoration.
 
-## 24. Operaciones que no deben bloquear Blender
+## 24. Operations that must not block Blender
 
-Las operaciones que pueden tardar deben ejecutarse en procesos o tareas controladas:
+Long-running operations must run in controlled processes or tasks:
 
-* Clone.
-* Pull.
-* Push.
-* Fetch.
-* Git LFS upload.
-* Git LFS download.
-* Checkout de archivos grandes.
+- Clone.
+- Pull.
+- Push.
+- Fetch.
+- Git LFS upload.
+- Git LFS download.
+- Checkout of large files.
 
-La interfaz debe mostrar:
+The UI must show:
 
 ```text
 Running...
@@ -1428,25 +1246,21 @@ Cancel
 Output
 ```
 
-No se debe modificar directamente la API de Blender desde hilos secundarios.
-
-Los resultados deben enviarse al hilo principal usando mecanismos seguros como temporizadores de Blender:
+The Blender API must not be modified directly from worker threads. Results must reach the main thread through safe mechanisms such as:
 
 ```python
 bpy.app.timers
 ```
 
-## 25. Consola interna y registro
+## 25. Internal console and logging
 
-Debe existir un panel llamado:
+Provide a panel named:
 
 ```text
 Git Output
 ```
 
-Debe mostrar las operaciones ejecutadas y sus resultados.
-
-Ejemplo:
+It must show executed operations and their results. Example:
 
 ```text
 [10:31:02] git status --short
@@ -1456,9 +1270,7 @@ Ejemplo:
 [10:32:21] Push completed
 ```
 
-No se deben mostrar credenciales, tokens ni información sensible.
-
-En modo normal puede mostrarse una descripción amigable:
+Credentials, tokens, and sensitive information must not be displayed. Normal mode may show friendly messages such as:
 
 ```text
 Creating commit...
@@ -1466,15 +1278,11 @@ Uploading large files with Git LFS...
 Push completed successfully.
 ```
 
-En modo desarrollador se pueden mostrar los argumentos completos, siempre ocultando información sensible.
+Developer mode may show complete arguments while still hiding sensitive information.
 
-## 26. Manejo de errores
+## 26. Error handling
 
-Los errores no deben mostrarse únicamente en la consola de Python.
-
-Deben transformarse en mensajes entendibles.
-
-Ejemplos:
+Errors must not be shown only in the Python console; they must be converted into understandable messages. Examples:
 
 ```text
 Git is not installed.
@@ -1488,31 +1296,26 @@ A merge conflict was detected.
 The current Blender file has not been saved.
 ```
 
-Cada error debe incluir, cuando sea posible:
+Whenever possible, every error must explain what happened, why it happened, how to resolve it, and provide a direct action button.
 
-* Qué ocurrió.
-* Por qué ocurrió.
-* Cómo solucionarlo.
-* Botón de acción directa.
+## 27. Security
 
-## 27. Seguridad
+Mandatory requirements:
 
-Requisitos obligatorios:
+- Use `subprocess.run()` or `subprocess.Popen()`.
+- Pass commands as lists.
+- Use `shell=False`.
+- Validate branch names, tags, and paths.
+- Do not concatenate commands.
+- Do not execute arbitrary user-entered text.
+- Do not store tokens in add-on files.
+- Do not store credentials in `.blend` files.
+- Do not display tokens in logs.
+- Do not automatically upload secret files.
+- Warn about files such as `.env`, private keys, and credentials.
+- Include a recommended `.gitignore`.
 
-* Utilizar `subprocess.run()` o `subprocess.Popen()`.
-* Pasar comandos como listas.
-* Utilizar `shell=False`.
-* Validar nombres de ramas, tags y rutas.
-* No concatenar comandos.
-* No ejecutar texto arbitrario introducido por el usuario.
-* No guardar tokens en archivos del add-on.
-* No guardar credenciales en `.blend`.
-* No mostrar tokens en logs.
-* No subir automáticamente archivos secretos.
-* Advertir sobre archivos como `.env`, claves privadas y credenciales.
-* Incluir `.gitignore` recomendado.
-
-Ejemplo de `.gitignore`:
+Example `.gitignore`:
 
 ```gitignore
 # Blender backups
@@ -1537,11 +1340,11 @@ Thumbs.db
 credentials.json
 ```
 
-Debe permitir que el usuario decida si quiere incluir los archivos de respaldo `.blend1` y `.blend2` en Git LFS o ignorarlos.
+Allow users to decide whether backup files `.blend1` and `.blend2` are tracked through Git LFS or ignored.
 
-## 28. Arquitectura del código
+## 28. Code architecture
 
-Utilizar una arquitectura modular:
+Use a modular architecture:
 
 ```text
 blender_git_manager/
@@ -1601,11 +1404,9 @@ blender_git_manager/
     └── backups.py
 ```
 
-## 29. Servicio central para comandos
+## 29. Central command service
 
-Crear un servicio central seguro.
-
-Ejemplo conceptual:
+Create a safe central service. Conceptual example:
 
 ```python
 from dataclasses import dataclass
@@ -1651,11 +1452,11 @@ class ProcessService:
         )
 ```
 
-Todos los comandos Git, Git LFS y GitHub CLI deben pasar por este servicio.
+All Git, Git LFS, and GitHub CLI commands must go through this service.
 
-## 30. Preferencias del add-on
+## 30. Add-on preferences
 
-Crear una sección de preferencias con:
+Create a preferences section containing:
 
 ```text
 Git executable path
@@ -1672,34 +1473,32 @@ Enable advanced Git operations
 Show developer output
 ```
 
-Las rutas deben detectarse automáticamente mediante mecanismos como:
+Paths must be auto-detected through mechanisms such as:
 
 ```python
 shutil.which("git")
 shutil.which("gh")
 ```
 
-## 31. Diseño visual
+## 31. Visual design
 
-La interfaz debe tener un diseño similar a un cliente Git moderno.
-
-Distribución sugerida:
+The UI must resemble a modern Git client. Suggested layout:
 
 ```text
 ┌──────────────────────────────────────────────────────────────────┐
-│ Repository: TankAssets        Branch: main        Sync: Up to date│
-├────────────────┬─────────────────────────────────────────────────┤
-│ Changes        │ Commit Graph                                    │
-│                │                                                 │
-│ Staged         │ ● main Fix track animation                      │
-│  tank.blend    │ │                                               │
-│                │ ● Configure Git LFS                              │
-│ Modified       │ │                                               │
-│  texture.png   │ ├─● feature/materials Add materials             │
-│                │ │/                                              │
-│ Untracked      │ ● Initial commit                                │
-│  notes.txt     │                                                 │
-├────────────────┴─────────────────────────────────────────────────┤
+│ Repository: TankAssets        Branch: main        Sync: Up to date │
+├─────────────────┬────────────────────────────────────────────────┤
+│ Changes         │ Commit Graph                                   │
+│                 │                                                │
+│ Staged          │ ● main Fix track animation                     │
+│  tank.blend     │ │                                              │
+│                 │ ● Configure Git LFS                            │
+│ Modified        │ │                                              │
+│  texture.png    │ ├─● feature/materials Add materials            │
+│                 │ │/                                             │
+│ Untracked       │ ● Initial commit                               │
+│  notes.txt      │                                                │
+├─────────────────┴────────────────────────────────────────────────┤
 │ Commit message                                                   │
 │ [Fix tank track animation                                     ] │
 │                                                                  │
@@ -1707,145 +1506,139 @@ Distribución sugerida:
 └──────────────────────────────────────────────────────────────────┘
 ```
 
-Prioridades del diseño:
+Design priorities:
 
-* Interfaz intuitiva.
-* Acciones visibles.
-* Estados claramente diferenciados.
-* Confirmaciones para acciones peligrosas.
-* Información técnica disponible sin sobrecargar al usuario.
-* Uso de iconos propios de Blender cuando sea posible.
-* Tooltips descriptivos.
-* Compatibilidad con tema claro y oscuro.
+- Intuitive interface.
+- Visible actions.
+- Clearly differentiated states.
+- Confirmations for dangerous actions.
+- Technical information available without overwhelming the user.
+- Use Blender-native icons where possible.
+- Descriptive tooltips.
+- Light and dark theme compatibility.
 
-## 32. Limitaciones conocidas
+## 32. Known limitations
 
-Debe informarse claramente:
+Clearly communicate that:
 
-* Git LFS almacena archivos grandes, pero no permite fusionar internamente dos archivos `.blend`.
-* Git no puede mostrar diferencias visuales de geometría, materiales o animaciones dentro de un `.blend`.
-* Dos usuarios modificando el mismo archivo `.blend` pueden producir conflictos.
-* Es recomendable dividir proyectos grandes en varios archivos enlazados.
-* Git LFS puede tener cuotas según el proveedor remoto.
-* La autenticación depende de GitHub CLI, Git Credential Manager o SSH configurados en el sistema.
+- Git LFS stores large files but cannot internally merge two `.blend` files.
+- Git cannot show visual geometry, material, or animation differences inside a `.blend`.
+- Two users modifying the same `.blend` file can create conflicts.
+- Large projects should be split into linked files.
+- Git LFS can have quotas depending on the remote provider.
+- Authentication depends on GitHub CLI, Git Credential Manager, or system-configured SSH.
 
-## 33. Desarrollo por fases
+## 33. Phased development
 
-### Fase 1: MVP
+### Phase 1: MVP
 
-Implementar:
+Implement:
 
-* Detección de Git, Git LFS y GitHub CLI.
-* Autenticación GitHub mediante navegador.
-* Detección del repositorio actual.
-* Asistente visual completo para inicializar un repositorio local, elegir la carpeta raíz, crear la rama inicial, configurar identidad Git, generar `.gitignore`, activar Git LFS, preparar archivos y crear el primer commit.
-* Clonar repositorio.
-* Mostrar rama activa.
-* Mostrar `git status`.
-* Stage individual.
-* Stage all.
-* Unstage.
-* Campo visual para mensaje.
-* Commit.
-* Commit and Push.
-* Pull.
-* Push.
-* Fetch.
-* Configuración básica de Git LFS.
-* Menú Git en la barra superior.
-* Panel de salida.
+- Git, Git LFS, and GitHub CLI detection.
+- Browser-based GitHub authentication.
+- Current repository detection.
+- Complete visual wizard to initialize a local repository, choose its root folder, create its initial branch, configure Git identity, generate `.gitignore`, enable Git LFS, stage files, and create the first commit.
+- Repository cloning.
+- Active branch display.
+- `git status` display.
+- Individual stage, stage all, and unstage.
+- Visual commit message field.
+- Commit and Commit + Push.
+- Pull, Push, and Fetch.
+- Basic Git LFS configuration.
+- Git top-bar menu.
+- Output panel.
 
-### Fase 2
+### Phase 2
 
-Implementar:
+Implement:
 
-* Lista de ramas.
-* Crear y cambiar ramas.
-* Remotos.
-* Stash.
-* Tags.
-* Historial de commits.
-* Detalles de commit.
-* Indicadores ahead y behind.
-* Creación de repositorios en GitHub.
+- Branch list.
+- Create and switch branches.
+- Remotes.
+- Stash.
+- Tags.
+- Commit history.
+- Commit details.
+- Ahead/behind indicators.
+- GitHub repository creation.
 
-### Fase 3
+### Phase 3
 
-Implementar:
+Implement:
 
-* Gráfico visual de commits.
-* Líneas de ramas.
-* Merge.
-* Revert.
-* Resolución guiada de conflictos.
-* Operaciones en segundo plano.
-* Barra de progreso.
-* Búsquedas y filtros.
+- Visual commit graph.
+- Branch lines.
+- Merge.
+- Revert.
+- Guided conflict resolution.
+- Background operations.
+- Progress bar.
+- Search and filters.
 
-### Fase 4
+### Phase 4
 
-Implementar:
+Implement:
 
-* Compatibilidad completa con Linux y macOS.
-* Soporte para GitLab y Bitbucket.
-* Bloqueo de archivos grandes.
-* Comparación de metadatos de escenas Blender.
-* Integración con equipos.
-* Pull requests.
-* Issues.
-* Releases.
+- Full Linux and macOS compatibility.
+- GitLab and Bitbucket support.
+- Large-file locking.
+- Blender-scene metadata comparison.
+- Team integration.
+- Pull requests.
+- Issues.
+- Releases.
 
-## 34. Criterios de aceptación del MVP
+## 34. MVP acceptance criteria
 
-El MVP se considera funcional cuando un usuario puede:
+The MVP is functional when a user can:
 
-1. Abrir Blender.
-2. Acceder al menú superior Git.
-3. Inicializar un repositorio local desde una carpeta seleccionada o desde la carpeta del archivo `.blend`.
-4. Elegir la rama inicial, configurar la identidad Git y generar un `.gitignore`.
-5. Activar Git LFS para archivos `.blend` durante la inicialización.
-6. Seleccionar archivos y crear el primer commit desde el asistente.
-7. Autenticarse en GitHub mediante el navegador cuando decida conectar el repositorio remoto.
-8. Ver los archivos modificados.
-9. Seleccionar archivos.
-10. Prepararlos para commit.
-11. Escribir el mensaje en un campo visual.
-12. Crear el commit con un botón.
-13. Ver la rama activa.
-14. Ejecutar pull y push desde botones.
-15. Consultar el historial básico de commits.
-16. Ver autor, fecha, hash y mensaje de cada commit.
-17. Recibir mensajes claros cuando una operación falla.
-18. Completar todo el flujo sin abrir una terminal.
+1. Open Blender.
+2. Access the Git top menu.
+3. Initialize a local repository from a selected folder or the `.blend` file folder.
+4. Choose the initial branch, configure Git identity, and generate `.gitignore`.
+5. Enable Git LFS for `.blend` files during initialization.
+6. Select files and create the first commit from the wizard.
+7. Authenticate with GitHub in a browser when choosing to connect the remote repository.
+8. View modified files.
+9. Select files.
+10. Stage them for commit.
+11. Write a message in a visual field.
+12. Create the commit with a button.
+13. View the active branch.
+14. Run Pull and Push through buttons.
+15. Review the basic commit history.
+16. See author, date, hash, and message for every commit.
+17. Receive clear messages when an operation fails.
+18. Complete the full workflow without opening a terminal.
 
+## 35. Expected result
 
-## 35. Resultado esperado
+Generate the complete add-on project with:
 
-Genera el proyecto completo del add-on con:
+- Modular code.
+- Typing where practical.
+- Error handling.
+- Correct Blender class registration and unregistration.
+- A Git menu in the top bar.
+- A working main panel.
+- A working visual wizard for repository initialization and first-commit creation.
+- Operators to initialize, open, and clone repositories.
+- Safe command-execution services.
+- Git LFS integration.
+- GitHub CLI integration.
+- Browser authentication.
+- Visual staging and commit UI.
+- Commit history.
+- Initial branch management.
+- `blender_manifest.toml`.
+- `README.md`.
+- `LICENSE`.
+- `.gitignore`.
+- Installation instructions.
+- Development and debugging instructions.
+- Unit tests for functions that do not depend directly on Blender's UI.
 
-* Código modular.
-* Tipado cuando sea posible.
-* Manejo de errores.
-* Registro y desregistro correcto de clases de Blender.
-* Menú Git en la barra superior.
-* Panel principal funcional.
-* Asistente visual funcional para inicializar repositorios y crear el primer commit.
-* Operadores para inicializar, abrir y clonar repositorios.
-* Servicios seguros para ejecutar comandos.
-* Integración con Git LFS.
-* Integración con GitHub CLI.
-* Autenticación mediante navegador.
-* Interfaz visual de staging y commits.
-* Historial de commits.
-* Gestión inicial de ramas.
-* Archivo `blender_manifest.toml`.
-* Archivo `README.md`.
-* Archivo `LICENSE`.
-* Archivo `.gitignore`.
-* Instrucciones de instalación.
-* Instrucciones para desarrollo y depuración.
-* Pruebas unitarias para las funciones que no dependan directamente de la interfaz de Blender.
+Do not generate isolated examples only. Build a real, extensible, organized project foundation.
 
-No generes únicamente ejemplos aislados. Construye una base de proyecto real, extensible y organizada.
-
-Empieza desarrollando el MVP. Explica cada archivo creado, presenta la estructura del proyecto y entrega el contenido completo de cada archivo necesario para ejecutar la primera versión en Blender.
+Begin by developing the MVP. Explain each created file, present the project structure, and provide the complete contents of every file required to run the first version in Blender.
