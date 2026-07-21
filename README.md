@@ -33,7 +33,7 @@ Esta entrega implementa una base ejecutable del **MVP** descrito en el documento
 - Fetch, Pull `--ff-only`, Push y Sync.
 - Recuperación limitada de pushes LFS ante locks no disponibles y errores transitorios HTTP 5xx.
 - Detección de upstream, commits ahead y behind.
-- Git Graph estructurado con 200 commits iniciales, carga incremental hasta 1000, carriles, bifurcaciones y merges.
+- Git Graph estructurado con 200 commits iniciales, carga incremental hasta 1000, carriles de colores, nodos alineados, bifurcaciones y merges.
 - Identificación visual de HEAD, ramas locales/remotas y tags, con búsqueda y filtros.
 - Detalles del commit seleccionado, archivos modificados, estadísticas y acciones de History.
 - Botón **Load Selected Commit** para materializar todo el árbol y recargar la escena en `Detached HEAD`.
@@ -57,7 +57,7 @@ El complemento continúa ofreciendo Git local cuando GitHub CLI no está instala
 
 ## Instalación rápida
 
-1. Descarga `blender_git_manager-0.1.7.zip`.
+1. Descarga `blender_git_manager-0.1.8.zip`.
 2. En Blender abre **Edit > Preferences > Add-ons** o **Extensions**.
 3. Selecciona **Install from Disk**.
 4. Elige el ZIP sin descomprimirlo.
@@ -125,6 +125,7 @@ blender_git_manager/
 │   ├── top_menu.py              Menú Git superior
 │   ├── main_panel.py            Panel lateral
 │   ├── dashboard.py             Diseño del administrador principal
+│   ├── graph_icons.py           Conexiones y nodos RGBA del Git Graph
 │   └── lists.py                 UILists de cambios, commits, ramas y salida
 └── utils/
     ├── __init__.py

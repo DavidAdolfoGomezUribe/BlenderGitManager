@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import bpy
 
+from .graph_icons import fallback_graph_glyph, graph_cell_style, graph_icon_id
+
 
 _LANE_NODE_ICONS = (
     "KEYTYPE_KEYFRAME_VEC",
@@ -11,42 +13,61 @@ _LANE_NODE_ICONS = (
     "KEYTYPE_MOVING_HOLD_VEC",
 )
 
-
-def _index_set(value: str) -> set[int]:
-    indexes: set[int] = set()
-    for raw in value.split():
-        try:
-            indexes.add(int(raw))
-        except ValueError:
-            continue
-    return indexes
+_GRAPH_CELL_WIDTH = 0.9
+_HASH_COLUMN_WIDTH = 5.7
+_MESSAGE_COLUMN_WIDTH = 22.0
+_AUTHOR_COLUMN_WIDTH = 11.0
+_DATE_COLUMN_WIDTH = 10.0
+_REFERENCES_COLUMN_WIDTH = 16.0
 
 
-def _graph_glyph(
-    lane: int,
-    node_lane: int,
-    parent_lanes: set[int],
-    active_lanes: set[int],
-    outgoing_lanes: set[int],
-) -> str:
-    horizontal = any(
-        min(node_lane, parent_lane) < lane < max(node_lane, parent_lane)
-        for parent_lane in parent_lanes
-        if parent_lane != node_lane
-    )
-    endpoint = lane in parent_lanes and lane != node_lane
-    vertical = lane in active_lanes or lane in outgoing_lanes
-    if horizontal and vertical:
-        return "┼"
-    if horizontal:
-        return "─"
-    if endpoint and vertical:
-        return "├" if lane < node_lane else "┤"
-    if endpoint:
-        return "└" if lane < node_lane else "┘"
-    if vertical:
-        return "│"
-    return " "
+def _visible_lane_count(context, lane_count: int) -> int:
+    region_width = int(getattr(getattr(context, "region", None), "width", 960))
+    if region_width >= 1400:
+        maximum = 18
+    elif region_width >= 900:
+        maximum = 12
+    else:
+        maximum = 6
+    return min(max(1, lane_count), maximum)
+
+
+def _graph_column_width(lane_count: int, visible_lanes: int) -> float:
+    overflow = 1.1 if lane_count > visible_lanes else 0.0
+    return max(2.8, visible_lanes * _GRAPH_CELL_WIDTH + overflow)
+
+
+def draw_commit_list_header(context, layout, state) -> None:
+    """Draw headers using the same widths as every commit row."""
+
+    lane_count = max(1, int(getattr(state, "history_graph_lane_count", 1)))
+    visible_lanes = _visible_lane_count(context, lane_count)
+    region_width = int(getattr(getattr(context, "region", None), "width", 960))
+    row = layout.row(align=True)
+
+    graph = row.row(align=True)
+    graph.ui_units_x = _graph_column_width(lane_count, visible_lanes)
+    graph.label(text="Graph")
+
+    object_id = row.row(align=True)
+    object_id.ui_units_x = _HASH_COLUMN_WIDTH
+    object_id.label(text="Commit")
+
+    message = row.row(align=True)
+    message.ui_units_x = _MESSAGE_COLUMN_WIDTH if region_width >= 760 else 15
+    message.label(text="Message")
+
+    if region_width < 760:
+        return
+    author = row.row(align=True)
+    author.ui_units_x = _AUTHOR_COLUMN_WIDTH
+    author.label(text="Author")
+    date = row.row(align=True)
+    date.ui_units_x = _DATE_COLUMN_WIDTH
+    date.label(text="Date")
+    references = row.row(align=True)
+    references.ui_units_x = _REFERENCES_COLUMN_WIDTH
+    references.label(text="References")
 
 
 class GITMANAGER_UL_changes(bpy.types.UIList):
@@ -72,47 +93,50 @@ class GITMANAGER_UL_commits(bpy.types.UIList):
         row = layout.row(align=True)
         is_head = bool(getattr(item, "is_head", False))
         node_lane = max(0, int(getattr(item, "lane_index", 0)))
-        parent_lanes = _index_set(getattr(item, "parent_lane_indexes", ""))
-        active_lanes = _index_set(getattr(item, "active_lane_indexes", ""))
-        outgoing_lanes = _index_set(getattr(item, "outgoing_lane_indexes", ""))
         lane_count = max(
             1,
             int(getattr(data, "history_graph_lane_count", 1)),
             int(getattr(item, "graph_lane_count", 1)),
         )
         region_width = int(getattr(getattr(context, "region", None), "width", 960))
-        max_visible_lanes = 12 if region_width >= 760 else 6
-        visible_lanes = min(lane_count, max_visible_lanes)
+        visible_lanes = _visible_lane_count(context, lane_count)
 
         graph = row.row(align=True)
-        graph.ui_units_x = max(2.6, visible_lanes * 0.9 + (0.8 if lane_count > visible_lanes else 0.0))
+        graph.ui_units_x = _graph_column_width(lane_count, visible_lanes)
         for lane in range(visible_lanes):
             cell = graph.row(align=True)
-            cell.ui_units_x = 0.85
-            if lane == node_lane:
-                cell.label(text="", icon=_LANE_NODE_ICONS[lane % len(_LANE_NODE_ICONS)])
-            else:
+            cell.ui_units_x = _GRAPH_CELL_WIDTH
+            style = graph_cell_style(item, lane)
+            icon_id = graph_icon_id(style)
+            if icon_id:
+                cell.label(text="", icon_value=icon_id)
+            elif style.node:
                 cell.label(
-                    text=_graph_glyph(
-                        lane,
-                        node_lane,
-                        parent_lanes,
-                        active_lanes,
-                        outgoing_lanes,
-                    )
+                    text="",
+                    icon=_LANE_NODE_ICONS[lane % len(_LANE_NODE_ICONS)],
                 )
+            else:
+                cell.label(text=fallback_graph_glyph(style))
         if lane_count > visible_lanes:
-            graph.label(text=f"+{lane_count - visible_lanes}")
+            hidden = lane_count - visible_lanes
+            graph.label(
+                text=(
+                    f"L{node_lane + 1}"
+                    if node_lane >= visible_lanes
+                    else f"+{hidden}"
+                ),
+                icon="FORWARD" if node_lane >= visible_lanes else "NONE",
+            )
 
         head = row.row(align=True)
-        head.ui_units_x = 5.7
+        head.ui_units_x = _HASH_COLUMN_WIDTH
         head.label(
             text=item.short_hash,
             icon="RADIOBUT_ON" if is_head else "BLANK1",
         )
 
         message = row.row(align=True)
-        message.ui_units_x = 22 if region_width >= 760 else 15
+        message.ui_units_x = _MESSAGE_COLUMN_WIDTH if region_width >= 760 else 15
         message.label(
             text=item.subject,
             icon="DECORATE_LINKED" if item.is_merge else "NONE",
@@ -122,11 +146,11 @@ class GITMANAGER_UL_commits(bpy.types.UIList):
             return
 
         author = row.row(align=True)
-        author.ui_units_x = 11
+        author.ui_units_x = _AUTHOR_COLUMN_WIDTH
         author.label(text=item.author_name)
 
         date = row.row(align=True)
-        date.ui_units_x = 10
+        date.ui_units_x = _DATE_COLUMN_WIDTH
         date.label(text=item.display_date or item.authored_at[:16])
 
         references: list[str] = []
@@ -137,7 +161,7 @@ class GITMANAGER_UL_commits(bpy.types.UIList):
         if item.tags:
             references.extend(f"#{tag}" for tag in item.tags.splitlines())
         refs = row.row(align=True)
-        refs.ui_units_x = 16
+        refs.ui_units_x = _REFERENCES_COLUMN_WIDTH
         refs.label(text="  ".join(references)[:80], icon="BOOKMARKS" if references else "BLANK1")
 
 

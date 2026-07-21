@@ -1,10 +1,12 @@
 Blender Git Manager validation report
 
-Version: 0.1.7
+Version: 0.1.8
+Root cause fixed: OK (Blender 5.2 prop_search keyword-only UI regression)
 Manifest: OK (Blender 5.2 extension validate)
 Python compileall: OK
 Unit/integration tests: 148 passed (CPython 3.13)
-Blender History Graph smoke: OK (async load, lanes, merges, refs, filters and details)
+Blender History UI popup: OK (real GUI screenshot with colored lanes, aligned nodes, merge and Detached HEAD)
+Blender History Graph smoke: OK (async load, strict full-dashboard draw, colored lanes, merges, refs, filters, details and icon cleanup)
 Blender History runtime hardening smoke: OK (Scene affinity, stale-result rejection, cancellation and bounded caches)
 Branch reload smoke: OK (scene reload, corrupt-file rollback, failing post-checkout hook and attached/detached HEAD)
 Commit checkout smoke: OK (button target, whole-tree checkout, scene reload and corrupt/missing/LFS rollback)
@@ -15,4 +17,4 @@ Installable ZIP root: OK
 Package exclusions: tests, Compressed, __pycache__, .pyc and removed history_interaction excluded
 Security scan: subprocess usage is centralized in ProcessService; shell=False; logs are redacted; Windows descendant cancellation verified
 Compressed folder: untouched
-SHA256: 54A5812FDB2010641D83B2BAC878FE43D2D0D086FC8A1571E697290B121287F2
+SHA256: B3F631EFC09923D32FF66E5D871B7A30BD7620B3981A989480AC662F52448E8F

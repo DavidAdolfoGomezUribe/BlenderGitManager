@@ -234,6 +234,15 @@ def refresh_repository_state(
         state.history_loaded = True
         state.history_loaded_count = len(snapshot.commits)
         state.history_visible_count = len(snapshot.commits)
+        try:
+            from .ui.graph_icons import prewarm_graph_icons
+
+            prewarm_graph_icons(state.commits)
+        except Exception as exc:
+            print(
+                "[Blender Git Manager][UI][WARNING] "
+                f"Could not prepare colored graph icons: {exc}"
+            )
 
     state.branches.clear()
     for branch in snapshot.branches:

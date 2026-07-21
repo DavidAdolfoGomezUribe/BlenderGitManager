@@ -1,5 +1,14 @@
 # Roadmap
 
+## Entregado en 0.1.8
+
+- Corregida la excepción de `UILayout.prop_search` que detenía el dibujo de History.
+- Carriles y conexiones del Git Graph renderizados con colores RGBA por carril.
+- Nodos centrados en la misma fila que el hash, mensaje, autor, fecha y referencias.
+- Vista History compacta para que el gráfico permanezca visible en ventanas bajas.
+- Detalles del commit plegables y gráfico a ancho completo con scroll vertical.
+- Pruebas visuales reales en Blender para merges y `Detached HEAD`.
+
 ## Entregado en 0.1.7
 
 - Git Graph visual con carriles, bifurcaciones, merges y referencias.
@@ -36,8 +45,6 @@
 
 ## Deuda técnica conocida del MVP
 
-- Ampliar la cancelación explícita del proceso actual a árboles completos de procesos auxiliares.
 - Añadir parser porcelain `-z` para nombres con saltos de línea o secuencias inusuales.
-- Añadir pruebas automatizadas dentro de Blender para registro, paneles y operadores.
 - Añadir localización inglés/español mediante traducciones de Blender.
 - Persistir preferencias de sesión de forma controlada sin introducir rutas o secretos en `.blend`.

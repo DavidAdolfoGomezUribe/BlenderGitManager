@@ -747,6 +747,18 @@ def _apply_page_to_state(
             )
         else:
             state.commits_index = 0
+        try:
+            from ..ui.graph_icons import prewarm_graph_icons
+
+            prewarm_graph_icons(state.commits)
+        except Exception as exc:
+            # The graph still has a text/metadata representation if custom
+            # icons cannot be prepared; report diagnostics without rejecting
+            # an otherwise valid History page.
+            print(
+                "[Blender Git Manager][UI][WARNING] "
+                f"Could not prepare colored graph icons: {exc}"
+            )
     finally:
         _APPLYING_STATE = False
 

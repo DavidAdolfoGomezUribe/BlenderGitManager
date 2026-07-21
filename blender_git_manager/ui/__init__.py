@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import bpy
 
+from .graph_icons import register_graph_icons, unregister_graph_icons
 from .lists import (
     GITMANAGER_UL_branches,
     GITMANAGER_UL_changes,
@@ -24,9 +25,21 @@ CLASSES = (
 
 
 def register_ui() -> None:
-    for cls in CLASSES:
-        bpy.utils.register_class(cls)
-    bpy.types.TOPBAR_MT_editor_menus.append(draw_git_menu)
+    register_graph_icons()
+    registered = []
+    try:
+        for cls in CLASSES:
+            bpy.utils.register_class(cls)
+            registered.append(cls)
+        bpy.types.TOPBAR_MT_editor_menus.append(draw_git_menu)
+    except Exception:
+        for cls in reversed(registered):
+            try:
+                bpy.utils.unregister_class(cls)
+            except RuntimeError:
+                pass
+        unregister_graph_icons()
+        raise
 
 
 def unregister_ui() -> None:
@@ -36,3 +49,4 @@ def unregister_ui() -> None:
         pass
     for cls in reversed(CLASSES):
         bpy.utils.unregister_class(cls)
+    unregister_graph_icons()

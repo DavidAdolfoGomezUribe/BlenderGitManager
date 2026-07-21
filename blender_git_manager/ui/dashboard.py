@@ -1,6 +1,10 @@
 from __future__ import annotations
 
+import traceback
+
 import bpy
+
+from .lists import draw_commit_list_header
 
 
 def _dependency_row(layout, label: str, installed: bool, version: str):
@@ -41,13 +45,28 @@ def _draw_onboarding(layout, state):
         box.operator("git_manager.open_preferences", text="Settings", icon="PREFERENCES")
 
 
-def _draw_header(layout, state):
+def _draw_header(layout, state, *, compact: bool = False):
     box = layout.box()
     row = box.row(align=True)
     row.label(text=state.repository_name or "Repository", icon="FILE_FOLDER")
     row.label(text=f"Branch: {state.active_branch}", icon="OUTLINER_OB_ARMATURE")
     row.label(text=state.sync_label, icon="CHECKMARK" if state.ahead == 0 and state.behind == 0 else "ERROR")
     row.operator("git_manager.refresh", text="", icon="FILE_REFRESH")
+
+    if compact:
+        row = box.row(align=True)
+        row.label(
+            text=(
+                f"Last commit: {state.last_commit_hash} "
+                f"{state.last_commit_subject}"
+            )
+        )
+        row.label(text=f"Author: {state.last_commit_author or '-'}")
+        row.operator("git_manager.open_folder", text="", icon="FILE_FOLDER")
+        if state.remote_url:
+            row.operator("git_manager.open_remote", text="", icon="URL")
+        row.operator("git_manager.open_preferences", text="", icon="PREFERENCES")
+        return
 
     grid = box.grid_flow(columns=2, even_columns=False, even_rows=False, align=True)
     grid.label(text=f"Path: {state.repository_path}")
@@ -122,23 +141,50 @@ def _draw_history_controls(layout, state):
     top.prop(state, "history_search", text="", icon="VIEWZOOM")
     top.operator("git_manager.history_load_more", text="Load More", icon="ADD")
 
-    filters = controls.grid_flow(columns=2, even_columns=True, even_rows=False, align=True)
-    filters.prop_search(
-        state,
-        "history_branch_filter",
-        state,
-        "branches",
-        "name",
-        text="Branch",
-        icon="OUTLINER_OB_ARMATURE",
-    )
+    filters = controls.row(align=True)
+    try:
+        filters.prop_search(
+            state,
+            "history_branch_filter",
+            state,
+            "branches",
+            text="Branch",
+            icon="OUTLINER_OB_ARMATURE",
+        )
+    except TypeError as exc:
+        print(
+            "[Blender Git Manager][UI][WARNING] "
+            f"Branch search control fell back to a text field: {exc}"
+        )
+        filters.prop(
+            state,
+            "history_branch_filter",
+            text="Branch",
+            icon="OUTLINER_OB_ARMATURE",
+        )
     filters.prop(state, "history_author_filter", text="Author", icon="USER")
-
-    toggles = controls.row(align=True)
-    toggles.prop(state, "history_show_all_branches", toggle=True)
-    toggles.prop(state, "history_show_remotes", toggle=True)
-    toggles.prop(state, "history_show_tags", toggle=True)
-    toggles.label(
+    filters.prop(
+        state,
+        "history_show_all_branches",
+        text="All",
+        toggle=True,
+        icon="COMMUNITY",
+    )
+    filters.prop(
+        state,
+        "history_show_remotes",
+        text="Remotes",
+        toggle=True,
+        icon="URL",
+    )
+    filters.prop(
+        state,
+        "history_show_tags",
+        text="Tags",
+        toggle=True,
+        icon="BOOKMARKS",
+    )
+    filters.label(
         text=(
             f"{state.history_visible_count} visible / "
             f"{state.history_loaded_count} loaded"
@@ -146,7 +192,7 @@ def _draw_history_controls(layout, state):
     )
 
 
-def _draw_history_graph(layout, state, rows: int):
+def _draw_history_graph(layout, context, state, rows: int):
     graph = layout.box()
     title = graph.row(align=True)
     title.label(text="Git Graph", icon="NODETREE")
@@ -157,8 +203,7 @@ def _draw_history_graph(layout, state, rows: int):
     elif state.history_dirty:
         title.label(text="Update pending", icon="FILE_REFRESH")
 
-    header = graph.row(align=True)
-    header.label(text="Graph     Commit            Message                         Author          Date          References")
+    draw_commit_list_header(context, graph, state)
 
     if state.history_error:
         error = graph.box()
@@ -287,16 +332,28 @@ def _draw_history_details(layout, state):
         files.label(text="Select a commit to load its changed files.", icon="INFO")
 
 
-def _draw_history(layout, state, expanded: bool):
+def _draw_history(layout, context, state, expanded: bool):
     _draw_history_controls(layout, state)
+    region_height = int(getattr(getattr(context, "region", None), "height", 720))
     if expanded:
-        content = layout.split(factor=0.67)
-        graph_column = content.column()
-        details_column = content.column()
-        _draw_history_graph(graph_column, state, rows=16)
-        _draw_history_details(details_column, state)
+        rows = max(6, min(12, (region_height - 300) // 22))
     else:
-        _draw_history_graph(layout, state, rows=10)
+        rows = 8
+    _draw_history_graph(layout, context, state, rows=rows)
+
+    detail_toggle = layout.row(align=True)
+    detail_toggle.prop(
+        state,
+        "history_show_details",
+        text=(
+            "Hide Commit Details"
+            if state.history_show_details
+            else "Show Commit Details"
+        ),
+        toggle=True,
+        icon="TRIA_DOWN" if state.history_show_details else "TRIA_RIGHT",
+    )
+    if state.history_show_details:
         _draw_history_details(layout, state)
 
 
@@ -338,7 +395,12 @@ def draw_dashboard(layout, context: bpy.types.Context, expanded: bool = False):
                 icon="INFO",
             )
 
-    if expanded or not state.git_installed or not state.repository_path:
+    history_mode = state.active_tab == "HISTORY"
+    if (
+        not state.git_installed
+        or not state.repository_path
+        or (expanded and not history_mode)
+    ):
         _draw_dependencies(layout, state)
 
     if not state.repository_path or not state.repository_name:
@@ -349,14 +411,27 @@ def draw_dashboard(layout, context: bpy.types.Context, expanded: bool = False):
             _draw_output(output, state)
         return
 
-    _draw_header(layout, state)
+    _draw_header(layout, state, compact=bool(expanded and history_mode))
     _draw_sync(layout, state)
     layout.prop(state, "active_tab", expand=True)
 
     if state.active_tab == "CHANGES":
         _draw_changes(layout, state)
     elif state.active_tab == "HISTORY":
-        _draw_history(layout, state, expanded)
+        try:
+            _draw_history(layout, context, state, expanded)
+        except Exception as exc:
+            print(f"[Blender Git Manager][UI][ERROR] History draw failed: {exc}")
+            traceback.print_exc()
+            error = layout.box()
+            error.alert = True
+            error.label(text="History could not be drawn.", icon="ERROR")
+            error.label(text=str(exc)[:240])
+            error.operator(
+                "git_manager.history_refresh",
+                text="Retry History",
+                icon="FILE_REFRESH",
+            )
     elif state.active_tab == "BRANCHES":
         _draw_branches(layout, state)
     elif state.active_tab == "LFS":

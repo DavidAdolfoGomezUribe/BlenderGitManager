@@ -214,6 +214,11 @@ class GitManagerState(bpy.types.PropertyGroup):
     history_loaded_count: IntProperty(default=0, options={"SKIP_SAVE"})
     history_visible_count: IntProperty(default=0, options={"SKIP_SAVE"})
     history_graph_lane_count: IntProperty(default=1, min=1, options={"SKIP_SAVE"})
+    history_show_details: BoolProperty(
+        name="Show Commit Details",
+        default=False,
+        options={"SKIP_SAVE"},
+    )
     history_generation: IntProperty(default=0, options={"SKIP_SAVE"})
     history_repository_signature: StringProperty(options={"SKIP_SAVE"})
 
