@@ -1,5 +1,8 @@
 # Blender Git Manager
 
+
+![BGM](/icon.png)
+
 **Blender Git Manager** is a Blender 4.2+ extension that brings a visual Git, Git LFS, and GitHub CLI workflow directly into Blender. It is designed for 3D artists and teams working with large binary files who want to create versions without manually typing terminal commands.
 
 This release provides an executable foundation for the **MVP** described in the requirements document. The architecture is ready to be extended later with stash support, merges, advanced conflict resolution, GitLab, and Bitbucket.
