@@ -1,5 +1,11 @@
 # Roadmap
 
+## Delivered in 0.1.9
+
+- Disabled Initialize, Open Existing, and Clone repository actions when a repository is already active.
+- Changed the extension manifest website to the Blender Git Manager GitHub repository.
+- Translated project documentation to English.
+
 ## Delivered in 0.1.8
 
 - Fixed the `UILayout.prop_search` exception that stopped History from drawing.

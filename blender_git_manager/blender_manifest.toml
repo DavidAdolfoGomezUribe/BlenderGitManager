@@ -1,12 +1,12 @@
 schema_version = "1.0.0"
 
 id = "blender_git_manager"
-version = "0.1.8"
+version = "0.1.9"
 name = "Blender Git Manager"
 tagline = "Visual Git, Git LFS and GitHub workflows inside Blender"
 maintainer = "David Gomez"
 type = "add-on"
-website = "https://github.com/"
+website = "https://github.com/DavidAdolfoGomezUribe/BlenderGitManager"
 tags = ["Development", "User Interface"]
 blender_version_min = "4.2.0"
 license = ["SPDX:GPL-3.0-or-later"]

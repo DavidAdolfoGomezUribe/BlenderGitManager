@@ -59,7 +59,7 @@ The extension continues to provide local Git functionality when GitHub CLI is no
 
 ## Quick installation
 
-1. Download `blender_git_manager-0.1.8.zip`.
+1. Download `blender_git_manager-0.1.9.zip`.
 2. In Blender, open **Edit > Preferences > Add-ons** or **Extensions**.
 3. Select **Install from Disk**.
 4. Choose the ZIP without extracting it.
